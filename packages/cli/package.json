@@ -2,15 +2,29 @@
   "name": "@devory/cli",
   "version": "0.1.0",
   "description": "Devory CLI — formal command interface for the ai-dev-factory",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
   },
-  "dependencies": {
-    "tsx": "^4.19.2"
-  },
+  "files": [
+    "dist/",
+    "src/",
+    "README.md"
+  ],
   "bin": {
-    "devory": "./src/bin.ts"
+    "devory": "./dist/bin.js"
+  },
+  "scripts": {
+    "build": "npm run build:bin && npm run build:lib",
+    "build:bin": "esbuild src/bin.ts --bundle --outfile=dist/bin.js --platform=node --format=cjs --banner:js='#!/usr/bin/env node'",
+    "build:lib": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=node --format=cjs",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@devory/core": "*",
+    "esbuild": "^0.20.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
   }
 }
