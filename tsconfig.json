@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "dist"
+  },
+  "include": [
+    "packages/core/src/**/*.ts",
+    "packages/cli/src/**/*.ts",
+    "packages/github/src/**/*.ts",
+    "packages/vscode/src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules"
+  ]
+}

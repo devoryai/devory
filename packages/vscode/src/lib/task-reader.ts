@@ -1,0 +1,121 @@
+/**
+ * packages/vscode/src/lib/task-reader.ts
+ *
+ * Pure filesystem reader for factory tasks.
+ * No VS Code API dependency — accepts an explicit tasksDir parameter so it
+ * can be unit-tested and called from any context.
+ *
+ * Uses @devory/core for frontmatter parsing and TaskMeta types.
+ */
+
+import * as fs from "fs";
+import * as path from "path";
+import { parseFrontmatter, type TaskMeta } from "@devory/core";
+
+export const LIFECYCLE_STAGES = [
+  "backlog",
+  "ready",
+  "doing",
+  "review",
+  "blocked",
+  "done",
+] as const;
+
+export type LifecycleStage = (typeof LIFECYCLE_STAGES)[number];
+
+export interface TaskSummary {
+  id: string;
+  title: string;
+  project: string;
+  status: string;
+  priority: string;
+  filename: string;
+  filepath: string;
+  stage: LifecycleStage;
+  bundle_id?: string;
+}
+
+export interface TaskDetail extends TaskSummary {
+  meta: Partial<TaskMeta>;
+  body: string;
+}
+
+/** List all task files in a single lifecycle stage directory. */
+export function listTasksInStage(
+  tasksDir: string,
+  stage: LifecycleStage
+): TaskSummary[] {
+  const dir = path.join(tasksDir, stage);
+  if (!fs.existsSync(dir)) return [];
+
+  return fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".md"))
+    .map((filename) => {
+      const filepath = path.join(dir, filename);
+      const content = fs.readFileSync(filepath, "utf-8");
+      const { meta } = parseFrontmatter(content);
+      return {
+        id: String(meta.id ?? filename.replace(".md", "")),
+        title: String(meta.title ?? "(untitled)"),
+        project: String(meta.project ?? ""),
+        status: String(meta.status ?? stage),
+        priority: String(meta.priority ?? ""),
+        filename,
+        filepath,
+        stage,
+        bundle_id:
+          typeof meta.bundle_id === "string" ? meta.bundle_id : undefined,
+      };
+    })
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/** List all tasks across all lifecycle stages. */
+export function listAllTasks(
+  tasksDir: string
+): Record<LifecycleStage, TaskSummary[]> {
+  const result = {} as Record<LifecycleStage, TaskSummary[]>;
+  for (const stage of LIFECYCLE_STAGES) {
+    result[stage] = listTasksInStage(tasksDir, stage);
+  }
+  return result;
+}
+
+/** Find a specific task by ID, searching all lifecycle stages. */
+export function findTaskById(
+  tasksDir: string,
+  id: string
+): TaskDetail | null {
+  for (const stage of LIFECYCLE_STAGES) {
+    const dir = path.join(tasksDir, stage);
+    if (!fs.existsSync(dir)) continue;
+
+    for (const filename of fs.readdirSync(dir).filter((f) => f.endsWith(".md"))) {
+      const filepath = path.join(dir, filename);
+      const content = fs.readFileSync(filepath, "utf-8");
+      const { meta, body } = parseFrontmatter(content);
+      const effectiveId = String(meta.id ?? filename.replace(".md", ""));
+      if (effectiveId === id) {
+        return {
+          id: effectiveId,
+          title: String(meta.title ?? "(untitled)"),
+          project: String(meta.project ?? ""),
+          status: String(meta.status ?? stage),
+          priority: String(meta.priority ?? ""),
+          filename,
+          filepath,
+          stage,
+          meta,
+          body,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+/** Return the file path for a task by ID, or null if not found. */
+export function findTaskFile(tasksDir: string, id: string): string | null {
+  return findTaskById(tasksDir, id)?.filepath ?? null;
+}

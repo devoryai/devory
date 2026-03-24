@@ -1,0 +1,95 @@
+{
+  "name": "devory-vscode",
+  "displayName": "Devory",
+  "description": "AI Dev Factory task and run management for VS Code",
+  "version": "0.1.1",
+  "publisher": "DevoryAI",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "icon": "icon.png",
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "devory.taskList",
+        "title": "Devory: List Tasks"
+      },
+      {
+        "command": "devory.taskCreate",
+        "title": "Devory: Create Task"
+      },
+      {
+        "command": "devory.taskMove",
+        "title": "Devory: Move Task"
+      },
+      {
+        "command": "devory.runStart",
+        "title": "Devory: Start Factory Run"
+      },
+      {
+        "command": "devory.runInspect",
+        "title": "Devory: Inspect Recent Runs"
+      },
+      {
+        "command": "devory.artifactInspect",
+        "title": "Devory: Inspect Artifacts"
+      },
+      {
+        "command": "devory.refresh",
+        "title": "Devory: Refresh Task Explorer",
+        "icon": "$(refresh)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "devoryTaskExplorer",
+          "name": "Devory Tasks"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "devory.refresh",
+          "when": "view == devoryTaskExplorer",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Devory",
+      "properties": {
+        "devory.factoryRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the ai-dev-factory repo root. Leave blank to auto-detect from workspace."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --format=cjs",
+    "prepackage": "npm run build",
+    "package": "vsce package --no-dependencies --allow-missing-repository",
+    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts"
+  },
+  "dependencies": {
+    "@devory/cli": "*",
+    "@devory/core": "*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.20.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
