@@ -1,6 +1,6 @@
 # Devory — VS Code Extension
 
-Task and run management for the [Devory AI Dev Factory](https://devory.ai) — browse tasks, kick off factory runs, and inspect artifacts without leaving your editor.
+Task and run management for [Devory](https://devory.ai) — browse tasks, kick off factory runs, and inspect artifacts without leaving your editor.
 
 ## Features
 
@@ -23,20 +23,19 @@ Access all commands via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and
 
 ## Requirements
 
-- The [ai-dev-factory](https://github.com/devoryai/ai-dev-factory) repo cloned locally
+- A Devory workspace — sign up at [devory.ai](https://devory.ai)
 - Node.js 18+
 
 ## Configuration
 
 | Setting | Default | Description |
 |---|---|---|
-| `devory.factoryRoot` | *(auto-detect)* | Absolute path to the `ai-dev-factory` repo root. Leave blank to auto-detect from your workspace. |
+| `devory.factoryRoot` | *(auto-detect)* | Absolute path to your Devory workspace root. Leave blank to auto-detect from your workspace. |
 
 ## Getting Started
 
-1. Clone the `ai-dev-factory` repo.
-2. Open it (or any workspace that contains it) in VS Code.
-3. Install this extension.
-4. The **Devory Tasks** panel will appear in the Explorer sidebar automatically.
+1. Open your Devory workspace in VS Code.
+2. Install this extension.
+3. The **Devory Tasks** panel will appear in the Explorer sidebar automatically.
 
-If the panel shows no tasks, set `devory.factoryRoot` in your VS Code settings to the absolute path of the repo.
+If the panel shows no tasks, set `devory.factoryRoot` in your VS Code settings to the absolute path of your workspace root.

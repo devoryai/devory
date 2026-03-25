@@ -1,6 +1,6 @@
 # Devory
 
-Open-source CLI, VS Code extension, and GitHub integration for the [Devory AI Dev Factory](https://devory.ai).
+Open-source CLI, VS Code extension, and GitHub integration for [Devory](https://devory.ai) by [Devory.AI](https://devory.ai).
 
 Devory is an AI-driven development factory — it manages tasks, orchestrates AI runs, tracks artifacts, and keeps your codebase healthy. This repo contains the open interface layer: the tools you use to interact with the factory.
 

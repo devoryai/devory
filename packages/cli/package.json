@@ -1,7 +1,7 @@
 {
   "name": "@devory/cli",
   "version": "0.1.1",
-  "description": "Devory CLI — formal command interface for the ai-dev-factory",
+  "description": "Devory CLI — formal command interface for Devory",
   "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
