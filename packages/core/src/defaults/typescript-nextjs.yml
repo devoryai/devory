@@ -1,0 +1,29 @@
+# Devory default baseline: TypeScript + Next.js
+# Extends the generic baseline with Next.js app-router conventions.
+# Referenced via: extends: "@devory/defaults/typescript-nextjs"
+
+version: "1"
+
+extends: "@devory/defaults/generic"
+
+stack:
+  language: TypeScript
+  framework: Next.js
+
+doctrine:
+  testing:
+    require_unit: true
+    require_integration: true
+    coverage_threshold: 80
+    avoid_mocking:
+      - database
+      - filesystem
+
+  architecture:
+    pattern: app-router
+    max_file_lines: 300
+    no_circular_deps: true
+
+  code_style:
+    no_any: true
+    prefer_explicit_over_clever: true
