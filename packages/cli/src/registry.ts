@@ -16,6 +16,11 @@ export interface CommandSpec {
 
 export const COMMANDS: CommandSpec[] = [
   {
+    name: "init",
+    description: "Scaffold a new Devory workspace in the current directory",
+    usage: "devory init [--dir <path>] [--force]",
+  },
+  {
     name: "task new",
     description: "Create a new task skeleton in the backlog",
     usage:
@@ -30,7 +35,7 @@ export const COMMANDS: CommandSpec[] = [
     name: "task validate",
     description: "Validate task frontmatter fields and status",
     usage:
-      "devory task validate [--file <file>] [--folder <folder>] [--root <dir>] [--status <status>]",
+      "devory task validate [--file <file>] [--folder <folder>] [--root <dir>] [--status <status>] [--strict]",
   },
   {
     name: "run",

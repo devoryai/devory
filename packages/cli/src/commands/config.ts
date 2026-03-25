@@ -11,6 +11,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { resolveFactoryRoot, type FactoryRootSource } from "../lib/factory-root.ts";
+import { loadStandards, STANDARDS_FILENAME } from "@devory/core";
+import { detectTier, type LicenseInfo } from "@devory/core";
 
 export const NAME = "config";
 export const USAGE = "devory config";
@@ -24,6 +26,8 @@ export interface ConfigReport {
   tasksDir: string;
   tasksDirFound: boolean;
   workspacesFound: string[];
+  standardsSource: "yaml" | "brain" | "none";
+  license: LicenseInfo;
 }
 
 export function parseArgs(
@@ -51,6 +55,11 @@ export function buildConfigReport(factoryRoot: string, source?: FactoryRootSourc
       })
     : [];
 
+  const { source: standardsSource } = loadStandards(factoryRoot);
+  const brainDir = path.join(factoryRoot, "brain");
+  const hasBrain = fs.existsSync(brainDir);
+  const license = detectTier(factoryRoot);
+
   return {
     factoryRoot,
     source,
@@ -58,16 +67,36 @@ export function buildConfigReport(factoryRoot: string, source?: FactoryRootSourc
     tasksDir,
     tasksDirFound,
     workspacesFound,
+    standardsSource: standardsSource.type === "yaml"
+      ? "yaml"
+      : hasBrain ? "brain" : "none",
+    license,
   };
 }
 
 /** Format a config report as a human-readable string. */
 export function formatConfigReport(report: ConfigReport): string {
   const sourceLabel = report.source ? ` (${report.source})` : "";
+  const standardsLabel =
+    report.standardsSource === "yaml"
+      ? `${STANDARDS_FILENAME} (yaml)`
+      : report.standardsSource === "brain"
+      ? "brain/ (markdown)"
+      : "none — run devory init";
+
+  const { license } = report;
+  const tierLabel = license.tier === "pro"
+    ? `Pro  (key via ${license.source === "env" ? "DEVORY_LICENSE_KEY" : ".devory/license"})`
+    : license.invalid
+    ? `Core (invalid key — ${license.reason})`
+    : "Core";
+
   const lines = [
     `Factory root:       ${report.factoryRoot}${sourceLabel}`,
+    `Tier:               ${tierLabel}`,
     `FACTORY_CONTEXT.md: ${report.contextFileFound ? "found" : "NOT FOUND"}`,
     `tasks/:             ${report.tasksDirFound ? "found" : "NOT FOUND"}`,
+    `Standards:          ${standardsLabel}`,
     `Packages:           ${
       report.workspacesFound.length > 0
         ? report.workspacesFound.join(", ")

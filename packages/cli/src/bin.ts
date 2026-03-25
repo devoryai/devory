@@ -7,6 +7,7 @@
  */
 
 import { buildRootHelp, helpFor } from "./help.ts";
+import * as init from "./commands/init.ts";
 import * as taskNew from "./commands/task-new.ts";
 import * as taskMove from "./commands/task-move.ts";
 import * as taskValidate from "./commands/task-validate.ts";
@@ -33,6 +34,16 @@ function dispatch(): number {
 
   const first = argv[0];
   const rest = argv.slice(1);
+
+  // ── init ───────────────────────────────────────────────────
+  if (first === "init") {
+    if (rest.includes("--help") || rest.includes("-h")) {
+      console.log(helpFor("init"));
+      return 0;
+    }
+    const parsed = init.parseArgs(rest);
+    return init.run(parsed.args);
+  }
 
   // ── task <sub> ─────────────────────────────────────────────
   if (first === "task") {

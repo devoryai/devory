@@ -1,6 +1,6 @@
 {
   "name": "@devory/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Devory CLI — formal command interface for Devory",
   "main": "./dist/index.js",
   "types": "./src/index.ts",
