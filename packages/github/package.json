@@ -2,19 +2,27 @@
   "name": "@devory/github",
   "version": "0.1.0",
   "description": "Devory GitHub integration — branch naming, PR helpers, and GitHub Actions support",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
   },
+  "files": [
+    "dist/",
+    "src/",
+    "README.md"
+  ],
   "scripts": {
+    "build": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=node --format=cjs",
+    "prepublishOnly": "npm run build",
     "test": "tsx --test src/test/branch-helpers.test.ts src/test/pr-helpers.test.ts src/test/action-helpers.test.ts"
   },
   "dependencies": {
-    "@devory/cli": "*",
-    "@devory/core": "*"
+    "@devory/cli": "0.1.1",
+    "@devory/core": "0.1.0"
   },
   "devDependencies": {
+    "esbuild": "^0.20.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }
