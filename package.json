@@ -12,7 +12,7 @@
   "scripts": {
     "build:vscode": "npm run build --workspace packages/vscode",
     "package:vscode": "npm run package --workspace packages/vscode",
-    "test": "tsx --test packages/core/src/parse.test.ts packages/cli/src/registry.test.ts packages/cli/src/lib/factory-root.test.ts packages/cli/src/commands/run.test.ts packages/github/src/test/branch-helpers.test.ts packages/github/src/test/pr-helpers.test.ts packages/github/src/test/action-helpers.test.ts packages/vscode/src/test/task-reader.test.ts packages/vscode/src/test/run-reader.test.ts packages/vscode/src/test/cli-bridge.test.ts"
+    "test": "tsx --test packages/core/src/parse.test.ts packages/core/src/license.test.ts packages/cli/src/registry.test.ts packages/cli/src/lib/factory-root.test.ts packages/cli/src/commands/run.test.ts packages/cli/src/commands/license.test.ts packages/github/src/test/branch-helpers.test.ts packages/github/src/test/pr-helpers.test.ts packages/github/src/test/action-helpers.test.ts packages/vscode/src/test/task-reader.test.ts packages/vscode/src/test/run-reader.test.ts packages/vscode/src/test/cli-bridge.test.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

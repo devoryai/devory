@@ -11,8 +11,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { resolveFactoryRoot, type FactoryRootSource } from "../lib/factory-root.ts";
-import { loadStandards, STANDARDS_FILENAME } from "@devory/core";
-import { detectTier, type LicenseInfo } from "@devory/core";
+import { loadStandards, STANDARDS_FILENAME } from "../../../core/src/index.ts";
+import { detectTier, type LicenseInfo } from "../../../core/src/index.ts";
 
 export const NAME = "config";
 export const USAGE = "devory config";
@@ -40,7 +40,7 @@ export function parseArgs(
  * Pure: build a config report given a factory root path.
  * Testable without spawning processes.
  */
-export function buildConfigReport(factoryRoot: string, source?: FactoryRootSource): ConfigReport {
+export async function buildConfigReport(factoryRoot: string, source?: FactoryRootSource): Promise<ConfigReport> {
   const contextFileFound = fs.existsSync(
     path.join(factoryRoot, "FACTORY_CONTEXT.md")
   );
@@ -58,7 +58,7 @@ export function buildConfigReport(factoryRoot: string, source?: FactoryRootSourc
   const { source: standardsSource } = loadStandards(factoryRoot);
   const brainDir = path.join(factoryRoot, "brain");
   const hasBrain = fs.existsSync(brainDir);
-  const license = detectTier(factoryRoot);
+  const license = await detectTier(factoryRoot);
 
   return {
     factoryRoot,
@@ -106,9 +106,9 @@ export function formatConfigReport(report: ConfigReport): string {
   return lines.join("\n");
 }
 
-export function run(_args: ConfigArgs): number {
+export async function run(_args: ConfigArgs): Promise<number> {
   const { root, source } = resolveFactoryRoot();
-  const report = buildConfigReport(root, source);
+  const report = await buildConfigReport(root, source);
   console.log(formatConfigReport(report));
   return 0;
 }

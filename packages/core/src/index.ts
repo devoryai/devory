@@ -40,8 +40,14 @@ export type {
   LoadedStandards,
 } from "./standards.ts";
 export {
+  clearLicenseCache,
+  clearLicenseToken,
   detectTier,
+  getLicenseCacheFilePath,
+  getLicenseFilePath,
+  getLicenseStatus,
   isFeatureEnabled,
   tierGateMessage,
+  writeLicenseToken,
 } from "./license.ts";
-export type { Tier, ProFeature, LicenseInfo } from "./license.ts";
+export type { Tier, ProFeature, LicenseInfo, LicenseStatus } from "./license.ts";

@@ -10,7 +10,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { parseFrontmatter, type TaskMeta } from "@devory/core";
+import { parseFrontmatter, type TaskMeta } from "../../../core/src/index.ts";
 
 export const LIFECYCLE_STAGES = [
   "backlog",

@@ -42,6 +42,12 @@ export {
 export type { ConfigReport } from "./commands/config.ts";
 
 export {
+  parseArgs as parseLicenseArgs,
+  formatLicenseStatusReport,
+} from "./commands/license.ts";
+export type { LicenseArgs, LicenseSubcommand } from "./commands/license.ts";
+
+export {
   parseArgs as parsePrPrepArgs,
   buildInvocation as buildPrPrepInvocation,
 } from "./commands/pr-prep.ts";

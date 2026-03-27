@@ -35,6 +35,18 @@ const paths = factoryPaths(env.root)
 - `TaskMeta` — frontmatter fields for a Devory task file
 - `FactoryEnvironment` — resolved root, mode, and source
 - `FactoryPaths` — all well-known directories in a factory workspace
+- `LicenseInfo` / `LicenseStatus` — resolved tier, source, verification, and cache state
+
+## License Helpers
+
+```ts
+import { detectTier, getLicenseStatus, writeLicenseToken, clearLicenseToken } from '@devory/core'
+
+const tier = await detectTier('/path/to/workspace')
+const status = await getLicenseStatus('/path/to/workspace')
+writeLicenseToken('/path/to/workspace', 'devory_pro_...')
+clearLicenseToken('/path/to/workspace')
+```
 
 ## Requirements
 

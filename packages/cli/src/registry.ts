@@ -59,6 +59,21 @@ export const COMMANDS: CommandSpec[] = [
     usage: "devory config",
   },
   {
+    name: "license activate",
+    description: "Write a Devory license key to .devory/license for this workspace",
+    usage: "devory license activate --key <token> [--root <dir>]",
+  },
+  {
+    name: "license clear",
+    description: "Remove the workspace .devory/license file and local verification cache",
+    usage: "devory license clear [--root <dir>]",
+  },
+  {
+    name: "license status",
+    description: "Show current tier, key source, cache usage, and Core fallback reason",
+    usage: "devory license status [--root <dir>]",
+  },
+  {
     name: "pr-prep",
     description: "Generate branch name, commit message, and PR description from a task",
     usage: "devory pr-prep [<task-file>] [--dry-run]",

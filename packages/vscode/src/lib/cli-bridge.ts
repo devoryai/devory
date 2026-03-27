@@ -13,9 +13,9 @@ import {
   buildTaskNewInvocation,
   buildTaskMoveInvocation,
   buildRunInvocation,
-} from "@devory/cli";
+} from "../../../cli/src/index.ts";
 
-export type { TaskNewArgs, TaskMoveArgs, RunArgs } from "@devory/cli";
+export type { TaskNewArgs, TaskMoveArgs, RunArgs } from "../../../cli/src/index.ts";
 export { buildTaskNewInvocation, buildTaskMoveInvocation, buildRunInvocation };
 
 export interface SpawnResult {

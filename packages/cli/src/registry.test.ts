@@ -337,13 +337,13 @@ describe("buildRun", () => {
 // ── config ────────────────────────────────────────────────────────────────────
 
 describe("buildConfigReport", () => {
-  test("returns factoryRoot in report", () => {
-    const report = buildConfigReport("/some/path");
+  test("returns factoryRoot in report", async () => {
+    const report = await buildConfigReport("/some/path");
     assert.equal(report.factoryRoot, "/some/path");
   });
 
-  test("reports missing context file for non-existent root", () => {
-    const report = buildConfigReport("/definitely/does/not/exist");
+  test("reports missing context file for non-existent root", async () => {
+    const report = await buildConfigReport("/definitely/does/not/exist");
     assert.equal(report.contextFileFound, false);
     assert.equal(report.tasksDirFound, false);
     assert.deepEqual(report.workspacesFound, []);
@@ -351,26 +351,26 @@ describe("buildConfigReport", () => {
 });
 
 describe("formatConfigReport", () => {
-  test("includes factory root in output", () => {
-    const report = buildConfigReport("/some/path");
+  test("includes factory root in output", async () => {
+    const report = await buildConfigReport("/some/path");
     const text = formatConfigReport(report);
     assert.ok(text.includes("/some/path"));
   });
 
-  test("mentions FACTORY_CONTEXT.md", () => {
-    const report = buildConfigReport("/some/path");
+  test("mentions FACTORY_CONTEXT.md", async () => {
+    const report = await buildConfigReport("/some/path");
     const text = formatConfigReport(report);
     assert.ok(text.includes("FACTORY_CONTEXT.md"));
   });
 
-  test("shows source when provided", () => {
-    const report = buildConfigReport("/some/path", "env:DEVORY_FACTORY_ROOT");
+  test("shows source when provided", async () => {
+    const report = await buildConfigReport("/some/path", "env:DEVORY_FACTORY_ROOT");
     const text = formatConfigReport(report);
     assert.ok(text.includes("env:DEVORY_FACTORY_ROOT"));
   });
 
-  test("omits source suffix when source is undefined", () => {
-    const report = buildConfigReport("/some/path");
+  test("omits source suffix when source is undefined", async () => {
+    const report = await buildConfigReport("/some/path");
     const text = formatConfigReport(report);
     assert.ok(!text.includes("env:") && !text.includes("git-walk") && !text.includes("cwd"));
   });

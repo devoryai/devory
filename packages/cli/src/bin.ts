@@ -15,6 +15,7 @@ import * as runCmd from "./commands/run.ts";
 import * as artifacts from "./commands/artifacts.ts";
 import * as worker from "./commands/worker.ts";
 import * as config from "./commands/config.ts";
+import * as license from "./commands/license.ts";
 import * as prPrep from "./commands/pr-prep.ts";
 import * as prCreate from "./commands/pr-create.ts";
 import * as improve from "./commands/improve.ts";
@@ -26,7 +27,7 @@ function fatal(msg: string): never {
   process.exit(1);
 }
 
-function dispatch(): number {
+async function dispatch(): Promise<number> {
   if (argv.length === 0 || argv[0] === "--help" || argv[0] === "-h") {
     console.log(buildRootHelp());
     return 0;
@@ -128,7 +129,35 @@ function dispatch(): number {
       return 0;
     }
     const parsed = config.parseArgs(rest);
-    return config.run(parsed.args);
+    return await config.run(parsed.args);
+  }
+
+  // ── license <sub> ──────────────────────────────────────────
+  if (first === "license") {
+    if (rest.length === 0 || rest[0] === "--help" || rest[0] === "-h") {
+      console.log(
+        [
+          "devory license <subcommand>",
+          "",
+          "Subcommands:",
+          "  activate  Save a license key to .devory/license",
+          "  clear     Remove the saved license file and local cache",
+          "  status    Show tier, key source, cache usage, and fallback reason",
+          "",
+          "Typical flow:",
+          "  devory license activate --key <token>",
+          "  devory license status",
+        ].join("\n")
+      );
+      return 0;
+    }
+    if (rest.includes("--help") || rest.includes("-h")) {
+      console.log(helpFor(`license ${rest[0]}`));
+      return 0;
+    }
+    const parsed = license.parseArgs(rest);
+    if (parsed.error) fatal(`license: ${parsed.error}\n\nUsage: ${license.USAGE}`);
+    return await license.run(parsed.args!);
   }
 
   // ── pr-prep ────────────────────────────────────────────────
@@ -168,4 +197,7 @@ function dispatch(): number {
   fatal(`Unknown command: ${first}\n\n${buildRootHelp()}`);
 }
 
-process.exit(dispatch());
+dispatch().then(process.exit).catch((err) => {
+  console.error(`devory: unexpected error: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(1);
+});

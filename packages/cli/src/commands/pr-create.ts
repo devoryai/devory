@@ -19,7 +19,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { parseFrontmatter } from "@devory/core";
+import { parseFrontmatter } from "../../../core/src/index.ts";
 import {
   buildPrMetadata,
   canCreatePr,

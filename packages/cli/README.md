@@ -19,6 +19,7 @@ devory run            Run the factory orchestrator
 devory worker         Start the factory worker loop
 devory artifacts      Build or inspect the run artifact index
 devory config         Show factory configuration and health
+devory license        Activate, clear, or inspect local license state
 
 devory pr-prep        Generate branch name, commit message, and PR description from a task
 devory pr-create      Create a GitHub PR from a task (requires GITHUB_TOKEN)
@@ -27,6 +28,14 @@ devory improve        Compute a live improvement signal (drift|compliance|refact
 ```
 
 Run any command with `--help` for usage details.
+
+## License Activation
+
+```bash
+devory license activate --key devory_pro_...
+devory license status
+devory license clear
+```
 
 ## Requirements
 
