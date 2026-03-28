@@ -1,0 +1,49 @@
+name: Publish VS Code extension
+
+on:
+  push:
+    tags:
+      - "vscode-v[0-9]+.[0-9]+.[0-9]+*"
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (package only, no marketplace publish)"
+        type: boolean
+        default: true
+
+jobs:
+  publish:
+    name: Publish devory-vscode to VS Code Marketplace
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run extension tests
+        run: npm run test --workspace packages/vscode
+
+      - name: Package extension
+        run: npm run package --workspace packages/vscode
+
+      - name: Upload .vsix artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: devory-vscode-${{ github.ref_name }}
+          path: packages/vscode/*.vsix
+          retention-days: 30
+
+      - name: Publish to VS Code Marketplace
+        if: ${{ inputs.dry_run != true }}
+        run: npx @vscode/vsce publish --packagePath packages/vscode/*.vsix
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}

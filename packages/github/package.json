@@ -1,6 +1,6 @@
 {
   "name": "@devory/github",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Devory GitHub integration — branch naming, PR helpers, and GitHub Actions support",
   "main": "./dist/index.js",
   "types": "./src/index.ts",

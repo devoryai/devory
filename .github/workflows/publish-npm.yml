@@ -1,0 +1,73 @@
+name: Publish npm packages
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (publish --dry-run, no actual publish)"
+        type: boolean
+        default: true
+
+jobs:
+  publish:
+    name: Publish @devory/* packages to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # for npm provenance
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build all packages
+        run: |
+          npm run build --workspace packages/core
+          npm run build --workspace packages/cli
+          npm run build --workspace packages/github
+
+      - name: Run tests
+        run: npm test
+
+      - name: Check version consistency
+        run: node scripts/check-versions.js
+
+      - name: Publish @devory/core
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm publish --dry-run --workspace packages/core
+          else
+            npm publish --workspace packages/core --access public --provenance
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @devory/cli
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm publish --dry-run --workspace packages/cli
+          else
+            npm publish --workspace packages/cli --access public --provenance
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @devory/github
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm publish --dry-run --workspace packages/github
+          else
+            npm publish --workspace packages/github --access public --provenance
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
