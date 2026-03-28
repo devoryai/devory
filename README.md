@@ -8,8 +8,8 @@ Devory is an AI-driven development factory — it manages tasks, orchestrates AI
 
 | Package | Description |
 |---|---|
-| [`packages/core`](packages/core) | Shared types, task frontmatter parsing, and path utilities |
-| [`packages/cli`](packages/cli) | `devory` CLI — create tasks, run the factory, manage PRs |
+| [`packages/core`](packages/core) | Shared types, task frontmatter parsing, license helpers, and path utilities |
+| [`packages/cli`](packages/cli) | `devory` CLI — create tasks, run the factory, manage licenses and PRs |
 | [`packages/github`](packages/github) | Branch naming, PR metadata helpers, GitHub Actions support |
 | [`packages/vscode`](packages/vscode) | VS Code extension — task explorer, run management |
 
@@ -27,23 +27,49 @@ npm install -g @devory/cli
 
 | Command | Description |
 |---|---|
+| `devory init` | Initialize a new factory workspace |
 | `devory task new` | Create a new task in the backlog |
 | `devory task move` | Move a task through the lifecycle |
 | `devory task validate` | Validate task frontmatter |
 | `devory run` | Run the factory orchestrator |
 | `devory worker` | Start the factory worker loop |
 | `devory artifacts` | Build or inspect the run artifact index |
-| `devory config` | Show factory configuration and health |
+| `devory config` | Show factory configuration and tier |
+| `devory license` | Activate, clear, or inspect local license state |
 | `devory pr-prep` | Generate branch name, commit message, and PR description from a task |
 | `devory pr-create` | Create a GitHub PR from a task (requires `GITHUB_TOKEN`) |
 | `devory improve` | Compute a live improvement signal (drift, compliance, refactor, doctrine) |
 
 ## Getting Started
 
-1. Sign up at [devory.ai](https://devory.ai) to get access to the factory.
+### Hosted (cloud)
+
+1. Sign up at [devory.ai](https://devory.ai) to get access to the factory engine.
 2. Clone your factory workspace.
-3. Install the VS Code extension or the CLI.
+3. Install the VS Code extension or CLI.
 4. Open your workspace — the **Devory Tasks** panel will appear automatically.
+
+### Self-hosted
+
+Run the full factory engine in your own infrastructure with Docker and Ollama. No code leaves your environment — only a license key verification reaches the Devory servers.
+
+```bash
+docker pull ghcr.io/bridgm/devory-engine:latest
+docker compose run --rm devory devory diagnostics
+docker compose run --rm devory devory run
+```
+
+See the [self-hosted deployment guide](https://devory.ai/docs/self-hosted) for Docker Compose setup, Ollama model selection, and air-gapped deployment options.
+
+## License Activation
+
+```bash
+devory license activate --key devory_pro_...
+devory license status
+devory license clear
+```
+
+Keys are issued automatically from the dashboard when your subscription is active. Core tier works without a key — Pro and Teams features require a key.
 
 ## Requirements
 
@@ -58,9 +84,12 @@ packages/
   cli/        # devory CLI commands
   github/     # GitHub integration helpers
   vscode/     # VS Code extension
+scripts/
+  bump-version.sh     # Bump all package versions consistently
+  check-versions.js   # Validate version alignment (used in CI)
+docs/
+  release.md  # Release and publish guide for maintainers
 ```
-
-The factory engine (orchestrator, model routing, doctrine, planners) runs as a hosted service at [devory.ai](https://devory.ai). This repo is the open interface layer that talks to it.
 
 ## Contributing
 
