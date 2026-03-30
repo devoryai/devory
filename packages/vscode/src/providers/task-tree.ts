@@ -27,7 +27,7 @@ export class StageItem extends vscode.TreeItem {
         ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None
     );
-    this.contextValue = "stage";
+    this.contextValue = `stage.${stage}`;
     this.iconPath = new vscode.ThemeIcon("folder");
   }
 }
@@ -38,7 +38,7 @@ export class TaskItem extends vscode.TreeItem {
       `${task.id}  ${task.title}`,
       vscode.TreeItemCollapsibleState.None
     );
-    this.contextValue = "task";
+    this.contextValue = `task.${task.stage}`;
     this.tooltip = `${task.title}\nProject: ${task.project}\nStatus: ${task.status}\nPriority: ${task.priority}`;
     this.description = task.priority || undefined;
     this.iconPath = new vscode.ThemeIcon("file");

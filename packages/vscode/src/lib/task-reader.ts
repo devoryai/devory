@@ -10,7 +10,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { parseFrontmatter, type TaskMeta } from "../../../core/src/index.ts";
+import { parseFrontmatter, type TaskMeta } from "@devory/core";
 
 export const LIFECYCLE_STAGES = [
   "backlog",
@@ -118,4 +118,16 @@ export function findTaskById(
 /** Return the file path for a task by ID, or null if not found. */
 export function findTaskFile(tasksDir: string, id: string): string | null {
   return findTaskById(tasksDir, id)?.filepath ?? null;
+}
+
+/** Find a task by absolute file path, or null if the file is not a known task. */
+export function findTaskByFile(tasksDir: string, filepath: string): TaskSummary | null {
+  const normalized = path.resolve(filepath);
+  for (const stage of LIFECYCLE_STAGES) {
+    const task = listTasksInStage(tasksDir, stage).find(
+      (entry) => path.resolve(entry.filepath) === normalized
+    );
+    if (task) return task;
+  }
+  return null;
 }

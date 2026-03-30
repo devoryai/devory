@@ -6,6 +6,7 @@
  * Tiers:
  *   Core  — no license key required; default baselines only; custom_rules ignored
  *   Pro   — signed JWT license token enables Pro features
+ *   Teams — org-scoped JWT with `org` and `seats` claims; same Pro features plus org identity
  *
  * Key resolution order:
  *   1. DEVORY_LICENSE_KEY environment variable
@@ -26,17 +27,31 @@ import * as path from "path";
 import * as crypto from "crypto";
 import * as https from "https";
 
-export type Tier = "core" | "pro";
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
+export type Tier = "core" | "pro" | "teams";
+
+/** Features gated behind Pro tier. */
 export type ProFeature = "custom_rules" | "baseline_overrides" | "shared_doctrine" | "pr_gates";
 
 export interface LicenseInfo {
   tier: Tier;
+  /** Raw token value, if one was found */
   key?: string;
+  /** Where the key was found */
   source?: "env" | "file";
+  /** True when a key was found but verification failed */
   invalid?: boolean;
+  /** Human-readable explanation of the tier decision */
   reason: string;
+  /** User ID from the verified JWT sub claim */
   userId?: string;
+  /** Organization identifier from the JWT `org` claim (Teams licenses only) */
+  orgId?: string;
+  /** Number of seats allocated from the JWT `seats` claim (Teams licenses only) */
+  seatCount?: number;
 }
 
 export interface LicenseStatus extends LicenseInfo {
@@ -51,6 +66,7 @@ export interface LicenseStatus extends LicenseInfo {
   kid?: string;
 }
 
+// Internal JWT types
 interface JwtHeader {
   alg: string;
   typ?: string;
@@ -58,10 +74,12 @@ interface JwtHeader {
 }
 
 interface JwtPayload {
-  sub: string;
-  tier: string;
-  exp: number;
-  iat: number;
+  sub: string;     // user ID
+  tier: string;    // "pro" | "teams" | "teams_annual" | etc.
+  exp: number;     // unix timestamp
+  iat: number;     // unix timestamp
+  org?: string;    // org identifier (Teams licenses only)
+  seats?: number;  // seat count (Teams licenses only)
 }
 
 interface ParsedJwt {
@@ -71,6 +89,7 @@ interface ParsedJwt {
   signatureBytes: Buffer;
 }
 
+// Cache types
 interface LicenseCache {
   kid: string;
   sub: string;
@@ -79,6 +98,8 @@ interface LicenseCache {
   token_hash: string;
   verified_at: number;
   cache_until: number;
+  org_id?: string;
+  seat_count?: number;
 }
 
 interface KeyCacheEntry {
@@ -88,19 +109,30 @@ interface KeyCacheEntry {
 
 type KeyCache = Record<string, KeyCacheEntry>;
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
 const ENV_VAR = "DEVORY_LICENSE_KEY";
 const LICENSE_FILE = path.join(".devory", "license");
 const LICENSE_CACHE_FILE = path.join(".devory", "license-cache.json");
 const KEY_CACHE_FILE = path.join(".devory", "key-cache.json");
 const LOCAL_JWK_FILE = path.join(".devory", "license.jwk");
 const KEYS_BASE_URL = "https://keys.devory.ai";
+/** Re-verify after 24 h even if the token hasn't expired. */
 const LICENSE_CACHE_TTL = 86_400;
+/** Refetch public keys after 7 days. */
 const KEY_CACHE_TTL = 604_800;
+/** Network timeout for key fetch in ms. */
 const KEY_FETCH_TIMEOUT_MS = 5_000;
 
 function tokenHash(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
+
+// ---------------------------------------------------------------------------
+// JWT parsing  (pure — no I/O, no crypto)
+// ---------------------------------------------------------------------------
 
 function b64urlToBuffer(s: string): Buffer {
   return Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64");
@@ -142,6 +174,10 @@ function parseJwt(token: string): ParsedJwt {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Signature verification  (pure — no I/O, sync)
+// ---------------------------------------------------------------------------
+
 function verifyRs256(signingInput: string, signatureBytes: Buffer, jwk: crypto.JsonWebKey): boolean {
   try {
     const key = crypto.createPublicKey({ key: jwk, format: "jwk" });
@@ -150,6 +186,10 @@ function verifyRs256(signingInput: string, signatureBytes: Buffer, jwk: crypto.J
     return false;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Network key fetch
+// ---------------------------------------------------------------------------
 
 function fetchKeyFromNetwork(kid: string): Promise<crypto.JsonWebKey> {
   return new Promise((resolve, reject) => {
@@ -177,6 +217,10 @@ function fetchKeyFromNetwork(kid: string): Promise<crypto.JsonWebKey> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Key cache R/W
+// ---------------------------------------------------------------------------
+
 function readKeyFromCache(kid: string, factoryRoot: string): crypto.JsonWebKey | null {
   const cachePath = path.join(factoryRoot, KEY_CACHE_FILE);
   if (!fs.existsSync(cachePath)) return null;
@@ -196,34 +240,48 @@ function writeKeyToCache(kid: string, jwk: crypto.JsonWebKey, factoryRoot: strin
     const cachePath = path.join(factoryRoot, KEY_CACHE_FILE);
     let cache: KeyCache = {};
     if (fs.existsSync(cachePath)) {
-      try {
-        cache = JSON.parse(fs.readFileSync(cachePath, "utf-8"));
-      } catch {}
+      try { cache = JSON.parse(fs.readFileSync(cachePath, "utf-8")); } catch { /* ignore */ }
     }
     cache[kid] = { jwk, cached_at: Math.floor(Date.now() / 1000) };
     fs.mkdirSync(path.dirname(cachePath), { recursive: true });
     fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2));
-  } catch {}
+  } catch {
+    // non-fatal — we'll just refetch next time
+  }
 }
 
+// ---------------------------------------------------------------------------
+// Key resolution
+// ---------------------------------------------------------------------------
+
 async function resolvePublicKey(kid: string, factoryRoot?: string): Promise<crypto.JsonWebKey> {
+  // 1. Local JWK override (air-gap path)
   if (factoryRoot) {
     const localPath = path.join(factoryRoot, LOCAL_JWK_FILE);
     if (fs.existsSync(localPath)) {
       try {
         const jwk = JSON.parse(fs.readFileSync(localPath, "utf-8")) as crypto.JsonWebKey;
+        // Accept if no kid field, or kid matches
         if (!jwk.kid || jwk.kid === kid) return jwk;
-      } catch {}
+      } catch {
+        // fall through
+      }
     }
 
+    // 2. Key cache
     const cached = readKeyFromCache(kid, factoryRoot);
     if (cached) return cached;
   }
 
+  // 3. Network fetch
   const jwk = await fetchKeyFromNetwork(kid);
   if (factoryRoot) writeKeyToCache(kid, jwk, factoryRoot);
   return jwk;
 }
+
+// ---------------------------------------------------------------------------
+// License cache R/W
+// ---------------------------------------------------------------------------
 
 function readLicenseCache(factoryRoot: string, token: string): LicenseCache | null {
   const cachePath = path.join(factoryRoot, LICENSE_CACHE_FILE);
@@ -239,6 +297,12 @@ function readLicenseCache(factoryRoot: string, token: string): LicenseCache | nu
   }
 }
 
+function tierFromClaim(tierClaim: string): Tier {
+  if (tierClaim === "pro" || tierClaim === "pro_annual" || tierClaim === "lifetime") return "pro";
+  if (tierClaim === "teams" || tierClaim === "teams_annual") return "teams";
+  return "core";
+}
+
 function writeLicenseCache(factoryRoot: string, payload: JwtPayload, kid: string): void {
   try {
     const now = Math.floor(Date.now() / 1000);
@@ -247,17 +311,25 @@ function writeLicenseCache(factoryRoot: string, payload: JwtPayload, kid: string
     const cache: LicenseCache = {
       kid,
       sub: payload.sub,
-      tier: payload.tier === "pro" ? "pro" : "core",
+      tier: tierFromClaim(payload.tier),
       exp: payload.exp,
       token_hash: tokenHash(token),
       verified_at: now,
       cache_until: now + LICENSE_CACHE_TTL,
     };
+    if (payload.org) cache.org_id = payload.org;
+    if (payload.seats != null) cache.seat_count = payload.seats;
     const cachePath = path.join(factoryRoot, LICENSE_CACHE_FILE);
     fs.mkdirSync(path.dirname(cachePath), { recursive: true });
     fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2));
-  } catch {}
+  } catch {
+    // non-fatal
+  }
 }
+
+// ---------------------------------------------------------------------------
+// Token resolution (where to look for the raw JWT)
+// ---------------------------------------------------------------------------
 
 function resolveToken(factoryRoot?: string): {
   token: string | null;
@@ -286,13 +358,6 @@ export function getLicenseCacheFilePath(factoryRoot: string): string {
   return path.join(factoryRoot, LICENSE_CACHE_FILE);
 }
 
-export function clearLicenseCache(factoryRoot: string): void {
-  const cachePath = getLicenseCacheFilePath(factoryRoot);
-  if (fs.existsSync(cachePath)) {
-    fs.unlinkSync(cachePath);
-  }
-}
-
 export function writeLicenseToken(factoryRoot: string, token: string): { path: string } {
   const trimmed = token.trim();
   if (!trimmed) {
@@ -316,7 +381,25 @@ export function clearLicenseToken(factoryRoot: string): { path: string; removed:
   return { path: licensePath, removed };
 }
 
+export function clearLicenseCache(factoryRoot: string): void {
+  const cachePath = getLicenseCacheFilePath(factoryRoot);
+  if (fs.existsSync(cachePath)) {
+    fs.unlinkSync(cachePath);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tier detection  (main public API)
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect the current license tier by verifying a signed JWT license token.
+ *
+ * @param factoryRoot  Absolute path to the factory workspace root.
+ *                     When omitted, file-based token and cache lookups are skipped.
+ */
 export async function getLicenseStatus(factoryRoot?: string): Promise<LicenseStatus> {
+  // 1. Find the raw token
   const { token, source, licenseFilePath } = resolveToken(factoryRoot);
   const cacheFilePath = factoryRoot ? getLicenseCacheFilePath(factoryRoot) : undefined;
   const sourceLabel =
@@ -339,6 +422,7 @@ export async function getLicenseStatus(factoryRoot?: string): Promise<LicenseSta
     };
   }
 
+  // 2. License cache hit — skip re-verification
   if (factoryRoot) {
     const cached = readLicenseCache(factoryRoot, token);
     if (cached) {
@@ -356,11 +440,14 @@ export async function getLicenseStatus(factoryRoot?: string): Promise<LicenseSta
         userId: cached.sub,
         kid: cached.kid,
         expiresAt: new Date(cached.exp * 1000).toISOString(),
+        orgId: cached.org_id,
+        seatCount: cached.seat_count,
         reason: `License verified from cache (user: ${cached.sub}, expires: ${new Date(cached.exp * 1000).toISOString().slice(0, 10)})`,
       };
     }
   }
 
+  // 3. Parse JWT structure
   let parsed: ParsedJwt;
   try {
     parsed = parseJwt(token);
@@ -381,6 +468,7 @@ export async function getLicenseStatus(factoryRoot?: string): Promise<LicenseSta
     };
   }
 
+  // 4. Check expiry before touching the network
   const now = Math.floor(Date.now() / 1000);
   if (now >= parsed.payload.exp) {
     return {
@@ -401,6 +489,7 @@ export async function getLicenseStatus(factoryRoot?: string): Promise<LicenseSta
     };
   }
 
+  // 5. Resolve the public key (local override → cache → network)
   let jwk: crypto.JsonWebKey;
   try {
     jwk = await resolvePublicKey(parsed.header.kid, factoryRoot);
@@ -423,6 +512,7 @@ export async function getLicenseStatus(factoryRoot?: string): Promise<LicenseSta
     };
   }
 
+  // 6. Verify signature
   if (!verifyRs256(parsed.signingInput, parsed.signatureBytes, jwk)) {
     return {
       tier: "core",
@@ -442,12 +532,15 @@ export async function getLicenseStatus(factoryRoot?: string): Promise<LicenseSta
     };
   }
 
+  // 7. Write license cache
   if (factoryRoot) {
     writeLicenseCache(factoryRoot, parsed.payload, parsed.header.kid);
   }
 
-  const tier: Tier = parsed.payload.tier === "pro" ? "pro" : "core";
-  return {
+  // 8. Return verified result
+  const tier: Tier = tierFromClaim(parsed.payload.tier);
+  const tierLabel = tier === "teams" ? "Teams" : "Pro";
+  const result: LicenseStatus = {
     tier,
     hasKey: true,
     key: token,
@@ -461,8 +554,11 @@ export async function getLicenseStatus(factoryRoot?: string): Promise<LicenseSta
     userId: parsed.payload.sub,
     expiresAt: new Date(parsed.payload.exp * 1000).toISOString(),
     kid: parsed.header.kid,
-    reason: `Valid Pro license (user: ${parsed.payload.sub}, expires: ${new Date(parsed.payload.exp * 1000).toISOString().slice(0, 10)})`,
+    reason: `Valid ${tierLabel} license (user: ${parsed.payload.sub}, expires: ${new Date(parsed.payload.exp * 1000).toISOString().slice(0, 10)})`,
   };
+  if (parsed.payload.org) result.orgId = parsed.payload.org;
+  if (parsed.payload.seats != null) result.seatCount = parsed.payload.seats;
+  return result;
 }
 
 export async function detectTier(factoryRoot?: string): Promise<LicenseInfo> {
@@ -474,19 +570,31 @@ export async function detectTier(factoryRoot?: string): Promise<LicenseInfo> {
     invalid: status.invalid,
     reason: status.reason,
     userId: status.userId,
+    orgId: status.orgId,
+    seatCount: status.seatCount,
   };
 }
 
+// ---------------------------------------------------------------------------
+// Feature gating
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true if the given Pro feature is enabled for the current tier.
+ */
 export function isFeatureEnabled(feature: ProFeature, info: LicenseInfo): boolean {
   switch (feature) {
     case "custom_rules":
     case "baseline_overrides":
     case "shared_doctrine":
     case "pr_gates":
-      return info.tier === "pro";
+      return info.tier === "pro" || info.tier === "teams";
   }
 }
 
+/**
+ * One-line advisory shown to Core users when a Pro-only field is configured.
+ */
 export function tierGateMessage(feature: ProFeature): string {
   const featureLabel: Record<ProFeature, string> = {
     custom_rules: "custom_rules in devory.standards.yml",
@@ -495,7 +603,7 @@ export function tierGateMessage(feature: ProFeature): string {
     pr_gates: "PR gates",
   };
   return (
-    `[devory] ${featureLabel[feature]} requires a Pro license — ` +
+    `[devory] ${featureLabel[feature]} requires a Pro or Teams license — ` +
     `set DEVORY_LICENSE_KEY or create .devory/license to upgrade. ` +
     `This setting will be ignored on Core tier.`
   );

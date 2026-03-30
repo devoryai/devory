@@ -1,0 +1,75 @@
+# =============================================================================
+# Devory Self-Hosted Deployment
+# =============================================================================
+#
+# Usage:
+#   1. Copy .env.example to .env and fill in your values
+#   2. Pull the Ollama model you want to use:
+#        docker compose run ollama ollama pull llama3.1:8b
+#   3. Start the stack:
+#        docker compose up -d ollama
+#   4. Run a Devory command against your workspace:
+#        docker compose run --rm devory devory config
+#        docker compose run --rm devory devory run --dry-run
+#
+# The devory service expects your project workspace to be at:
+#   DEVORY_WORKSPACE on the host → /workspace in the container
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Ollama — local AI model server
+  # GPU support: uncomment the `deploy` section below for NVIDIA GPU
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    # Uncomment to enable NVIDIA GPU:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Devory engine — factory orchestrator
+  # ---------------------------------------------------------------------------
+  devory:
+    image: ghcr.io/bridgm/devory-engine:latest
+    # Or build locally:
+    # build: .
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      FACTORY_DEFAULT_ENGINE: ollama
+      OLLAMA_BASE_URL: http://ollama:11434
+      DEVORY_CONTAINER: "1"
+      DEVORY_FACTORY_ROOT: /workspace
+      # Set your license key for Pro features (optional — Core works without it)
+      DEVORY_LICENSE_KEY: ${DEVORY_LICENSE_KEY:-}
+    volumes:
+      # Mount your project workspace — Devory reads tasks/ and writes runs/
+      - ${DEVORY_WORKSPACE:-.}:/workspace
+      # Optional: persist the license file
+      - ${DEVORY_DOTDIR:-./devory-data}:/workspace/.devory
+    # Override the command to run a specific Devory subcommand:
+    #   docker compose run --rm devory devory run
+    #   docker compose run --rm devory devory config
+    command: ["--help"]
+
+volumes:
+  ollama_models:

@@ -7,35 +7,14 @@
 
 import * as fs from "fs";
 import * as path from "path";
-
-export interface TaskRecord {
-  task_id: string;
-  outcome: string;
-  engine: string;
-  fallback_taken: boolean;
-  start_time: string;
-  end_time: string;
-  notes: string[];
-}
-
-export interface FailureRecord {
-  task_id: string;
-  reason: string;
-  timestamp: string;
-}
-
-export interface RunRecord {
-  run_id: string;
-  status: string;
-  task_queue: string[];
-  tasks_executed: TaskRecord[];
-  failure: FailureRecord | null;
-  start_time: string;
-  end_time: string | null;
-}
+import {
+  RESUMABLE_RUN_STATUSES,
+  normalizeRunRecord,
+  type RunRecord,
+} from "@devory/core";
 
 /** Statuses that mean the run stopped before completion and can be resumed. */
-export const RESUMABLE_STATUSES = ["failed", "paused_for_review"] as const;
+export const RESUMABLE_STATUSES = RESUMABLE_RUN_STATUSES;
 
 /** List all run records, newest first. */
 export function listRuns(runsDir: string): RunRecord[] {
@@ -49,7 +28,7 @@ export function listRuns(runsDir: string): RunRecord[] {
     .map((filename) => {
       try {
         const raw = fs.readFileSync(path.join(runsDir, filename), "utf-8");
-        return JSON.parse(raw) as RunRecord;
+        return normalizeRunRecord(JSON.parse(raw));
       } catch {
         return null;
       }
@@ -66,8 +45,8 @@ export function getRunById(runsDir: string, runId: string): RunRecord | null {
     .filter((f) => f.endsWith(".json") && !f.endsWith("-manifest.json"))) {
     try {
       const raw = fs.readFileSync(path.join(runsDir, filename), "utf-8");
-      const run = JSON.parse(raw) as RunRecord;
-      if (run.run_id === runId) return run;
+      const run = normalizeRunRecord(JSON.parse(raw));
+      if (run?.run_id === runId) return run;
     } catch {
       /* skip corrupt files */
     }
@@ -88,5 +67,6 @@ export function formatRunLabel(run: RunRecord): string {
     ? run.start_time.slice(0, 16).replace("T", " ")
     : "unknown";
   const taskCount = run.tasks_executed?.length ?? 0;
-  return `${run.run_id}  [${run.status}]  ${taskCount} task(s)  started ${date}`;
+  const displayStatus = run.unattended_execution?.status ?? run.status;
+  return `${run.run_id}  [${displayStatus}]  ${taskCount} task(s)  started ${date}`;
 }

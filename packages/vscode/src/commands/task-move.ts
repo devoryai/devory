@@ -1,20 +1,20 @@
 /**
  * packages/vscode/src/commands/task-move.ts
  *
- * devory.taskMove — QuickPick task, pick target stage, then move via @devory/cli.
+ * devory.taskMove — QuickPick task, pick target stage, then move via the
+ * shared workspace API exported from @devory/cli.
  */
 
 import * as vscode from "vscode";
 import * as path from "path";
-import {
-  LIFECYCLE_STAGES,
-  listTasksInStage,
-} from "../lib/task-reader.js";
-import { buildTaskMoveInvocation, spawnInvocation } from "../lib/cli-bridge.js";
+import { LIFECYCLE_STAGES } from "@devory/cli";
+import { listTasksInStage } from "../lib/task-reader.js";
+import { runTaskMoveWorkflow } from "../lib/task-move.js";
 
 export async function taskMoveCommand(
   factoryRoot: string,
-  tasksDir: string
+  tasksDir: string,
+  onMoved?: () => void
 ): Promise<void> {
   if (!factoryRoot || !tasksDir) {
     vscode.window.showErrorMessage(
@@ -50,23 +50,20 @@ export async function taskMoveCommand(
   });
   if (!pickedStage) return;
 
-  const inv = buildTaskMoveInvocation({ task: relPath, to: pickedStage.label });
-
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: `Moving ${pickedTask.label} → ${pickedStage.label}…`,
     },
     async () => {
-      const result = await spawnInvocation(inv, factoryRoot);
-      if (result.exitCode !== 0) {
-        vscode.window.showErrorMessage(
-          `Devory: move failed\n${result.stderr || result.stdout}`
-        );
+      const result = runTaskMoveWorkflow(
+        { task: relPath, to: pickedStage.label, label: pickedTask.label },
+        { factoryRoot, onMoved }
+      );
+      if (!result.ok) {
+        vscode.window.showErrorMessage(result.error);
       } else {
-        vscode.window.showInformationMessage(
-          `Devory: moved ${pickedTask.label} → ${pickedStage.label}.`
-        );
+        vscode.window.showInformationMessage(result.message);
       }
     }
   );

@@ -1,0 +1,72 @@
+{
+  "commands": {
+    "allow": [
+      "git status",
+      "git diff",
+      "git add",
+      "npm run test",
+      "npm run validate:task"
+    ],
+    "require_approval": [
+      "git push",
+      "git commit",
+      "npm install",
+      "pnpm install",
+      "yarn install"
+    ],
+    "forbid": [
+      "git reset --hard",
+      "rm -rf /",
+      "sudo"
+    ]
+  },
+  "filesystem": {
+    "writable_roots": [
+      ".",
+      "tasks",
+      "runs",
+      "artifacts"
+    ],
+    "read_only_roots": [
+      ".git"
+    ],
+    "require_approval_outside_writable_roots": true
+  },
+  "network": {
+    "allow": false,
+    "allowed_hosts": [],
+    "require_approval_for_hosts": [
+      "*"
+    ]
+  },
+  "package_installs": {
+    "allow": false,
+    "allowed_managers": [],
+    "require_approval": true
+  },
+  "test_execution": {
+    "allow": true,
+    "allowed_commands": [
+      "npm run test",
+      "npm run validate:task"
+    ],
+    "require_approval_commands": []
+  },
+  "approval_required_actions": [
+    "write_outside_workspace",
+    "network_access",
+    "package_install",
+    "destructive_git",
+    "secret_access"
+  ],
+  "forbidden_actions": [
+    "destructive_delete",
+    "privilege_escalation",
+    "force_push_without_request"
+  ],
+  "escalation": {
+    "unmatched_command": "require_approval",
+    "out_of_policy_action": "halt_and_escalate",
+    "invalid_policy": "fallback_to_defaults"
+  }
+}

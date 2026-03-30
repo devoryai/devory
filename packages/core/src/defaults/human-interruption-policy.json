@@ -1,0 +1,19 @@
+{
+  "version": "human-interruption-policy-v1",
+  "default_interruption_level": "level_1",
+  "default_input_mode": "local-api",
+  "allowed_input_modes": ["local-api", "cli", "digest"],
+  "default_fallback_behavior": "continue-other-work",
+  "timeout_seconds": 1800,
+  "timeout_on_expiry": "assume-default",
+  "notification_mode": "digest",
+  "digest_cadence_minutes": 30,
+  "interruption_thresholds": {
+    "ambiguity": "level_1",
+    "confirmation": "level_1",
+    "approval": "level_2",
+    "destructive_change": "level_3",
+    "credentials": "level_3",
+    "external_side_effect": "level_2"
+  }
+}
