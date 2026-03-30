@@ -1,13 +1,14 @@
 /**
  * packages/vscode/src/commands/run-start.ts
  *
- * devory.runStart — configure and start a factory run via @devory/cli.
+ * devory.runStart — configure and start a factory run via the packaged
+ * local runtime adapter.
  */
 
 import * as vscode from "vscode";
-import { buildRunInvocation, spawnInvocation } from "../lib/cli-bridge.js";
+import { startFactoryRun } from "../lib/run-adapter.js";
 
-export async function runStartCommand(factoryRoot: string): Promise<void> {
+export async function runStartCommand(factoryRoot: string, runtimeRoot: string): Promise<void> {
   if (!factoryRoot) {
     vscode.window.showErrorMessage(
       "Devory: factory root not found. Set devory.factoryRoot in settings."
@@ -30,23 +31,19 @@ export async function runStartCommand(factoryRoot: string): Promise<void> {
 
   const limit = limitStr.trim() ? Number(limitStr.trim()) : undefined;
 
-  const inv = buildRunInvocation({ limit, dryRun: false, validate: false });
-
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: "Devory: factory run started…",
+      title: "Devory: starting factory run…",
       cancellable: false,
     },
     async (progress) => {
-      progress.report({ message: "spawning orchestrator" });
-      const result = await spawnInvocation(inv, factoryRoot);
-      if (result.exitCode !== 0) {
-        vscode.window.showErrorMessage(
-          `Devory: factory run failed (exit ${result.exitCode})\n${result.stderr || result.stdout}`
-        );
+      progress.report({ message: "launching packaged runtime" });
+      const result = await startFactoryRun(factoryRoot, runtimeRoot, { limit });
+      if (!result.ok) {
+        vscode.window.showErrorMessage(result.message);
       } else {
-        vscode.window.showInformationMessage("Devory: factory run completed.");
+        vscode.window.showInformationMessage(result.message);
       }
     }
   );

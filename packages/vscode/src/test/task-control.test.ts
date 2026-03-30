@@ -1,0 +1,86 @@
+/**
+ * packages/vscode/src/test/task-control.test.ts
+ *
+ * Tests for src/lib/task-control.ts.
+ *
+ * Run: tsx --test packages/vscode/src/test/task-control.test.ts
+ */
+
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  formatTaskReviewError,
+  runTaskPromoteWorkflow,
+  runTaskReviewWorkflow,
+} from "../lib/task-control.js";
+
+describe("runTaskPromoteWorkflow", () => {
+  test("promotes a ready task to doing and refreshes on success", () => {
+    let changed = false;
+
+    const result = runTaskPromoteWorkflow(
+      {
+        task: "tasks/ready/factory-177.md",
+        label: "factory-177",
+        fromStage: "ready",
+      },
+      {
+        factoryRoot: "/workspace",
+        moveTaskImpl: () => ({
+          ok: true,
+          fromPath: "/workspace/tasks/ready/factory-177.md",
+          toPath: "/workspace/tasks/doing/factory-177.md",
+          fromStatus: "ready",
+          toStatus: "doing",
+        }),
+        onChanged: () => {
+          changed = true;
+        },
+      }
+    );
+
+    assert.deepEqual(result, {
+      ok: true,
+      message: "Devory: promoted factory-177 → doing.",
+    });
+    assert.equal(changed, true);
+  });
+});
+
+describe("runTaskReviewWorkflow", () => {
+  test("returns a friendly invalid-context error when a task is not in review", () => {
+    const result = runTaskReviewWorkflow(
+      {
+        task: "tasks/doing/factory-177.md",
+        label: "factory-177",
+        action: "approve",
+      },
+      {
+        factoryRoot: "/workspace",
+        applyReviewActionImpl: () => ({
+          ok: false,
+          error: "Task factory-177 must be in review before review actions can run",
+        }),
+      }
+    );
+
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+    assert.match(result.error, /review action failed/);
+    assert.match(result.error, /must be in review/);
+  });
+});
+
+describe("formatTaskReviewError", () => {
+  test("includes validation details when present", () => {
+    const message = formatTaskReviewError({
+      ok: false,
+      error: "Validation failed",
+      validationErrors: ["reason is required for block action"],
+    });
+
+    assert.match(message, /review action failed/);
+    assert.match(message, /Validation failed/);
+    assert.match(message, /reason is required/);
+  });
+});

@@ -1,8 +1,8 @@
 {
   "name": "devory-vscode",
-  "displayName": "Devory",
+  "displayName": "Devory.AI",
   "description": "AI Dev Factory task and run management for VS Code",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "publisher": "DevoryAI",
   "engines": {
     "vscode": "^1.85.0"
@@ -12,7 +12,22 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onView:devoryTaskExplorer",
+    "onCommand:devory.refresh",
+    "onCommand:devory.taskList",
+    "onCommand:devory.taskCreate",
+    "onCommand:devory.taskMove",
+    "onCommand:devory.taskPromote",
+    "onCommand:devory.reviewQueue",
+    "onCommand:devory.taskApprove",
+    "onCommand:devory.taskSendBack",
+    "onCommand:devory.taskBlock",
+    "onCommand:devory.taskRequeue",
+    "onCommand:devory.runStart",
+    "onCommand:devory.runResume",
+    "onCommand:devory.runInspect",
+    "onCommand:devory.artifactInspect"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -30,8 +45,36 @@
         "title": "Devory: Move Task"
       },
       {
+        "command": "devory.taskPromote",
+        "title": "Devory: Promote Task"
+      },
+      {
+        "command": "devory.reviewQueue",
+        "title": "Devory: Open Review Queue"
+      },
+      {
+        "command": "devory.taskApprove",
+        "title": "Devory: Approve Review Task"
+      },
+      {
+        "command": "devory.taskSendBack",
+        "title": "Devory: Send Review Task Back"
+      },
+      {
+        "command": "devory.taskBlock",
+        "title": "Devory: Block Review Task"
+      },
+      {
+        "command": "devory.taskRequeue",
+        "title": "Devory: Requeue Blocked Task"
+      },
+      {
         "command": "devory.runStart",
         "title": "Devory: Start Factory Run"
+      },
+      {
+        "command": "devory.runResume",
+        "title": "Devory: Resume Factory Run"
       },
       {
         "command": "devory.runInspect",
@@ -51,7 +94,7 @@
       "explorer": [
         {
           "id": "devoryTaskExplorer",
-          "name": "Devory Tasks"
+          "name": "Devory.AI"
         }
       ]
     },
@@ -61,6 +104,95 @@
           "command": "devory.refresh",
           "when": "view == devoryTaskExplorer",
           "group": "navigation"
+        },
+        {
+          "command": "devory.taskCreate",
+          "when": "view == devoryTaskExplorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "devory.reviewQueue",
+          "when": "view == devoryTaskExplorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "devory.runResume",
+          "when": "view == devoryTaskExplorer",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "devory.taskPromote",
+          "when": "view == devoryTaskExplorer && viewItem == task.backlog",
+          "group": "inline"
+        },
+        {
+          "command": "devory.taskPromote",
+          "when": "view == devoryTaskExplorer && viewItem == task.ready",
+          "group": "inline"
+        },
+        {
+          "command": "devory.taskPromote",
+          "when": "view == devoryTaskExplorer && viewItem == task.doing",
+          "group": "inline"
+        },
+        {
+          "command": "devory.taskApprove",
+          "when": "view == devoryTaskExplorer && viewItem == task.review",
+          "group": "inline"
+        },
+        {
+          "command": "devory.taskSendBack",
+          "when": "view == devoryTaskExplorer && viewItem == task.review",
+          "group": "navigation@1"
+        },
+        {
+          "command": "devory.taskBlock",
+          "when": "view == devoryTaskExplorer && viewItem == task.review",
+          "group": "navigation@2"
+        },
+        {
+          "command": "devory.taskRequeue",
+          "when": "view == devoryTaskExplorer && viewItem == task.blocked",
+          "group": "inline"
+        },
+        {
+          "command": "devory.reviewQueue",
+          "when": "view == devoryTaskExplorer && viewItem == task.review",
+          "group": "navigation@3"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "devory.taskPromote",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/(backlog|ready|doing)\\//",
+          "group": "navigation@10"
+        },
+        {
+          "command": "devory.taskApprove",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/review\\//",
+          "group": "navigation@11"
+        },
+        {
+          "command": "devory.taskSendBack",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/review\\//",
+          "group": "navigation@12"
+        },
+        {
+          "command": "devory.taskBlock",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/review\\//",
+          "group": "navigation@13"
+        },
+        {
+          "command": "devory.taskRequeue",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/blocked\\//",
+          "group": "navigation@14"
+        },
+        {
+          "command": "devory.reviewQueue",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/review\\//",
+          "group": "navigation@15"
         }
       ]
     },
@@ -79,7 +211,7 @@
     "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --format=cjs",
     "prepackage": "npm run build",
     "package": "vsce package --no-dependencies --allow-missing-repository",
-    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts"
+    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts src/test/task-create.test.ts src/test/task-move.test.ts src/test/task-control.test.ts src/test/control-command-flow.test.ts src/test/contributions.test.ts src/test/capabilities.test.ts src/test/run-adapter.test.ts"
   },
   "dependencies": {
     "@devory/cli": "*",

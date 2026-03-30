@@ -41,3 +41,7 @@ export function getFactoryPaths(factoryRoot: string) {
     artifactsDir: path.join(factoryRoot, "artifacts"),
   };
 }
+
+export function getExtensionRuntimeRoot(extensionPath: string): string {
+  return path.join(extensionPath, "runtime");
+}

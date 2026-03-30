@@ -17,8 +17,10 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import { load as parseYaml } from "js-yaml";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const MODULE_DIR =
+  typeof __dirname === "string"
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Schema types
@@ -113,8 +115,8 @@ export function loadStandards(factoryRoot: string): LoadedStandards {
     throw new Error(`devory: ${STANDARDS_FILENAME} must be a YAML object, got: ${typeof parsed}`);
   }
 
-  const user = parsed as Standards;
-  const extendsValue = (user as Standards & { extends?: string }).extends
+  const user = parsed as unknown as Standards;
+  const extendsValue = (user as unknown as Standards & { extends?: string }).extends
     ?? user.doctrine?.extends;
 
   // Resolve extends chain if a bundled baseline is referenced
@@ -137,7 +139,7 @@ export function loadStandards(factoryRoot: string): LoadedStandards {
 // ---------------------------------------------------------------------------
 
 const DEVORY_DEFAULTS_PREFIX = "@devory/defaults/";
-const DEFAULTS_DIR = path.join(__dirname, "defaults");
+const DEFAULTS_DIR = path.join(MODULE_DIR, "defaults");
 
 const KNOWN_BASELINES: Record<string, string> = {
   generic: "generic.yml",
@@ -170,7 +172,7 @@ export function loadBaseline(extendsValue: string): Standards {
   const parsed = parseYaml(raw);
   if (!parsed || typeof parsed !== "object") return {};
 
-  const baseline = parsed as Standards & { extends?: string };
+  const baseline = parsed as unknown as Standards & { extends?: string };
   const parentExtends = baseline.extends;
 
   if (parentExtends) {
@@ -178,7 +180,7 @@ export function loadBaseline(extendsValue: string): Standards {
     return mergeStandards(parent, baseline);
   }
 
-  return baseline as Standards;
+  return baseline as unknown as Standards;
 }
 
 /**

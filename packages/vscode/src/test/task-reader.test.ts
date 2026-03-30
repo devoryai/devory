@@ -18,6 +18,7 @@ import {
   listTasksInStage,
   listAllTasks,
   findTaskById,
+  findTaskByFile,
   findTaskFile,
 } from "../lib/task-reader.js";
 
@@ -193,5 +194,19 @@ describe("findTaskFile", () => {
   test("returns null for unknown task", () => {
     const fp = findTaskFile(tasksDir, "factory-999");
     assert.equal(fp, null);
+  });
+});
+
+describe("findTaskByFile", () => {
+  test("returns the task summary for a known file path", () => {
+    const filepath = path.join(tasksDir, "ready", "factory-003-ready-task.md");
+    const task = findTaskByFile(tasksDir, filepath);
+    assert.ok(task !== null);
+    assert.equal(task?.id, "factory-003");
+    assert.equal(task?.stage, "ready");
+  });
+
+  test("returns null for non-task files", () => {
+    assert.equal(findTaskByFile(tasksDir, path.join(tmpDir, "README.md")), null);
   });
 });

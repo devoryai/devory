@@ -9,6 +9,37 @@
 export { COMMANDS } from "./registry.ts";
 export type { CommandSpec } from "./registry.ts";
 
+// Shared workspace mutation APIs — call these directly instead of spawning scripts
+export {
+  createTask,
+  moveTask,
+  applyReviewAction,
+  buildTaskFilename,
+  buildTaskSkeleton,
+  buildReviewArtifact,
+  ACTION_STAGE_MAP,
+  checkTransition,
+  reviewActionToStage,
+  rewriteStatus,
+  REVIEW_ACTIONS,
+  validateReviewAction,
+  validateRequiredFields,
+  LIFECYCLE_STAGES,
+  LIFECYCLE_DIR_MAP,
+  VALID_TRANSITIONS,
+} from "./lib/workspace.ts";
+export type {
+  CreateTaskArgs,
+  CreateTaskResult,
+  MoveTaskArgs,
+  MoveTaskResult,
+  ApplyReviewActionArgs,
+  ApplyReviewActionResult,
+  LifecycleStage,
+  ReviewAction,
+  TransitionCheck,
+} from "./lib/workspace.ts";
+
 export { buildRootHelp, buildCommandHelp, helpFor } from "./help.ts";
 
 export {
@@ -42,12 +73,6 @@ export {
 export type { ConfigReport } from "./commands/config.ts";
 
 export {
-  parseArgs as parseLicenseArgs,
-  formatLicenseStatusReport,
-} from "./commands/license.ts";
-export type { LicenseArgs, LicenseSubcommand } from "./commands/license.ts";
-
-export {
   parseArgs as parsePrPrepArgs,
   buildInvocation as buildPrPrepInvocation,
 } from "./commands/pr-prep.ts";
@@ -67,3 +92,12 @@ export type {
   ImproveArgs,
   ImproveSignalType,
 } from "./commands/improve.ts";
+
+export {
+  parseArgs as parseDoctorArgs,
+  runChecks as runDoctorChecks,
+  checkTaskStages,
+  checkStandardsFile,
+  checkRuntimeConfig,
+} from "./commands/doctor.ts";
+export type { DoctorArgs } from "./commands/doctor.ts";
