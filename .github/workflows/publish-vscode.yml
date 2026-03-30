@@ -32,6 +32,7 @@ jobs:
       - name: Build dependencies
         run: |
           npm run build --workspace packages/core
+          npm run build --workspace packages/github
           npm run build --workspace packages/cli
 
       - name: Run extension tests
