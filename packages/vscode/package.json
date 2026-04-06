@@ -12,22 +12,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onView:devoryTaskExplorer",
-    "onCommand:devory.refresh",
-    "onCommand:devory.taskList",
-    "onCommand:devory.taskCreate",
-    "onCommand:devory.taskMove",
-    "onCommand:devory.taskPromote",
-    "onCommand:devory.reviewQueue",
-    "onCommand:devory.taskApprove",
-    "onCommand:devory.taskSendBack",
-    "onCommand:devory.taskBlock",
-    "onCommand:devory.taskRequeue",
-    "onCommand:devory.runStart",
-    "onCommand:devory.runResume",
-    "onCommand:devory.runInspect",
-    "onCommand:devory.artifactInspect"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
