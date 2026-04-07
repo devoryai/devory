@@ -2,6 +2,10 @@
   "name": "@devory/cli",
   "version": "0.3.0",
   "description": "Devory CLI — formal command interface for Devory",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devoryai/devory"
+  },
   "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
