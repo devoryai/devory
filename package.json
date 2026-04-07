@@ -1,7 +1,7 @@
 {
   "name": "devory",
   "version": "0.3.1",
-  "description": "Devory \u2014 AI Dev Factory CLI, VS Code extension, and core utilities",
+  "description": "Devory public tooling for structured AI-assisted engineering",
   "private": true,
   "workspaces": [
     "packages/core",

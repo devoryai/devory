@@ -1,47 +1,47 @@
 # @devory/cli
 
-The official CLI for [Devory](https://devory.ai) — initialize workspaces, create tasks, run the factory, manage licenses and PRs.
+The Devory CLI is the repo-first command surface for Devory.
 
-## Installation
+Use it to initialize a workspace, create and move tasks, run Devory, inspect configuration, and manage licenses.
+
+## Install Or Run
+
+Global install is supported:
 
 ```bash
 npm install -g @devory/cli
 ```
 
-## Commands
-
-```
-devory init           Initialize a new factory workspace
-
-devory task new       Create a new task in the backlog
-devory task move      Move a task through the lifecycle
-devory task validate  Validate task frontmatter
-
-devory run            Run the factory orchestrator
-devory worker         Start the factory worker loop
-devory artifacts      Build or inspect the run artifact index
-devory config         Show factory configuration and tier
-devory license        Activate, clear, or inspect local license state
-
-devory pr-prep        Generate branch name, commit message, and PR description from a task
-devory pr-create      Create a GitHub PR from a task (requires GITHUB_TOKEN)
-
-devory improve        Compute a live improvement signal (drift|compliance|refactor|doctrine)
-```
-
-Run any command with `--help` for usage details.
-
-## License Activation
+But for most day-one workflows, running with `npx` is enough:
 
 ```bash
-devory license activate --key devory_pro_...
-devory license status
-devory license clear
+npx @devory/cli init
 ```
 
-Keys are issued from the [Devory dashboard](https://devory.ai/dashboard/license) when your subscription is active. Core tier works without a key — Pro and Teams features require one.
+## What The CLI Is For
 
-## Requirements
+- initialize a Devory workspace
+- create and validate tasks
+- move tasks through the lifecycle
+- execute runs
+- inspect configuration and licensing
+- prepare or create PRs from review-ready work
 
-- Node.js 18+
-- A Devory factory workspace — sign up at [devory.ai](https://devory.ai)
+## Core Commands
+
+| Command | Description |
+|---|---|
+| `devory init` | Create the Devory workspace structure in the current repo |
+| `devory task new` | Create a backlog task |
+| `devory task move` | Move a task between lifecycle stages |
+| `devory task validate` | Validate task structure and required sections |
+| `devory run` | Execute Devory against ready work |
+| `devory config` | Show resolved workspace and tier information |
+| `devory license` | Activate or inspect a paid license |
+
+## Plans
+
+User-facing plan names are `Free`, `Pro`, and `Teams`.
+
+The CLI may still report the free tier as `Core`. That is the runtime label for the same base non-paid plan.
+

@@ -1,7 +1,7 @@
 {
   "name": "devory-vscode",
   "displayName": "Devory.AI",
-  "description": "AI Dev Factory task and run management for VS Code",
+  "description": "Repo-aware task, run, doctrine, and review workflow for Devory in VS Code",
   "version": "0.3.1",
   "publisher": "DevoryAI",
   "engines": {

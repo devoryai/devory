@@ -1,96 +1,41 @@
-# Devory
+# Devory Public Packages
 
-Open-source CLI, VS Code extension, and GitHub integration for [Devory](https://devory.ai) by [Devory.AI](https://devory.ai).
+This repository contains the public tooling layer for Devory: the CLI, VS Code extension, shared core utilities, and GitHub helpers.
 
-Devory is an AI-driven development factory — it manages tasks, orchestrates AI runs, tracks artifacts, and keeps your codebase healthy. This repo contains the open interface layer: the tools you use to interact with the factory.
+Devory is an AI-assisted engineering system, not just a code generator. These packages help you run that workflow locally, inside your repository, with tasks, doctrine, artifacts, and review controls.
 
-## Packages
+## Included Packages
 
-| Package | Description |
+| Package | Purpose |
 |---|---|
-| [`packages/core`](packages/core) | Shared types, task frontmatter parsing, license helpers, and path utilities |
-| [`packages/cli`](packages/cli) | `devory` CLI — create tasks, run the factory, manage licenses and PRs |
-| [`packages/github`](packages/github) | Branch naming, PR metadata helpers, GitHub Actions support |
-| [`packages/vscode`](packages/vscode) | VS Code extension — task explorer, run management |
+| [`packages/core`](packages/core) | Shared task, doctrine, licensing, and workspace utilities |
+| [`packages/cli`](packages/cli) | `devory` command line interface |
+| [`packages/github`](packages/github) | Branch naming, PR metadata, and guarded GitHub helpers |
+| [`packages/vscode`](packages/vscode) | VS Code extension for task, run, doctrine, and artifact workflows |
 
-## VS Code Extension
+## Day-One Setup
 
-Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=DevoryAI.devory-vscode).
+You do not need a global CLI install to get started.
 
-Browse tasks, kick off factory runs, and inspect artifacts without leaving your editor. A **Devory Tasks** panel appears in the Explorer sidebar automatically when you open a factory workspace.
+Choose one:
 
-## CLI
+1. Install the VS Code extension and let it initialize the workspace on first run.
+2. Run `npx @devory/cli init` in a repository.
 
-```bash
-npm install -g @devory/cli
-```
+From there:
 
-| Command | Description |
-|---|---|
-| `devory init` | Initialize a new factory workspace |
-| `devory task new` | Create a new task in the backlog |
-| `devory task move` | Move a task through the lifecycle |
-| `devory task validate` | Validate task frontmatter |
-| `devory run` | Run the factory orchestrator |
-| `devory worker` | Start the factory worker loop |
-| `devory artifacts` | Build or inspect the run artifact index |
-| `devory config` | Show factory configuration and tier |
-| `devory license` | Activate, clear, or inspect local license state |
-| `devory pr-prep` | Generate branch name, commit message, and PR description from a task |
-| `devory pr-create` | Create a GitHub PR from a task (requires `GITHUB_TOKEN`) |
-| `devory improve` | Compute a live improvement signal (drift, compliance, refactor, doctrine) |
+1. Create a task.
+2. Move it to `ready`.
+3. Run Devory.
+4. Review the result and artifacts.
 
-## Getting Started
+## Plans
 
-### Hosted (cloud)
+Devory uses `Free`, `Pro`, and `Teams` as product plan language.
 
-1. Sign up at [devory.ai](https://devory.ai) to get access to the factory engine.
-2. Clone your factory workspace.
-3. Install the VS Code extension or CLI.
-4. Open your workspace — the **Devory Tasks** panel will appear automatically.
+- `Free`: local repo-first workflow and BYOK model usage
+- `Pro`: paid individual capabilities and advanced doctrine support
+- `Teams`: seats, roles, and shared governance
 
-### Self-hosted
+Some runtime output still uses `Core` as the free-tier label.
 
-Run the full factory engine in your own infrastructure with Docker and Ollama. No code leaves your environment — only a license key verification reaches the Devory servers.
-
-```bash
-docker pull ghcr.io/bridgm/devory-engine:latest
-docker compose run --rm devory devory diagnostics
-docker compose run --rm devory devory run
-```
-
-See the [self-hosted deployment guide](https://devory.ai/docs/self-hosted) for Docker Compose setup, Ollama model selection, and air-gapped deployment options.
-
-## License Activation
-
-```bash
-devory license activate --key devory_pro_...
-devory license status
-devory license clear
-```
-
-Keys are issued automatically from the dashboard when your subscription is active. Core tier works without a key — Pro and Teams features require a key.
-
-## Requirements
-
-- Node.js 18+
-- VS Code 1.85+ (for the extension)
-
-## Repository Structure
-
-```
-packages/
-  core/       # Shared types and parsing — no external dependencies
-  cli/        # devory CLI commands
-  github/     # GitHub integration helpers
-  vscode/     # VS Code extension
-scripts/
-  bump-version.sh     # Bump all package versions consistently
-  check-versions.js   # Validate version alignment (used in CI)
-docs/
-  release.md  # Release and publish guide for maintainers
-```
-
-## Contributing
-
-Issues and PRs welcome. The packages in this repo are the public interface — if you hit a bug in the CLI, extension, or task parsing, this is the right place.

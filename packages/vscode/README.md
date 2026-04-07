@@ -1,59 +1,42 @@
-# Devory — VS Code Extension
+# Devory VS Code Extension
 
-Task and run management for [Devory](https://devory.ai) — browse tasks, manage Factory content, kick off factory runs, and inspect artifacts without leaving your editor.
+The Devory extension turns VS Code into a practical control surface for Devory.
 
-## Features
+It helps you initialize a workspace, manage tasks, inspect doctrine and skills, run Devory, and review outputs without leaving the editor.
 
-### Task Explorer
-A tree view in the Explorer sidebar shows all your Devory tasks organized by lifecycle stage. The tree exposes stage-aware actions for promotion, review decisions, archiving, and blocked or archived task restore flows.
+## Why It Matters
 
-### Factory Explorer
-A second tree view shows active doctrine files and skills. You can create new doctrine or skills directly from the pane and archive items you no longer want active.
+Devory is not just a chat window for code generation. The extension exposes the actual workflow:
 
-### Commands
+- task lifecycle
+- doctrine and skill files
+- first-run workspace bootstrap
+- run execution and artifact inspection
+- review actions for supervised delivery
+
+## First Run
+
+Open a repository, install the extension, and let Devory check whether the workspace is already initialized.
+
+If it is not, the extension can scaffold it for you. That bootstrap flow works even without a global `devory` install.
+
+## Main Commands
 
 | Command | Description |
 |---|---|
-| **Devory: List Tasks** | Quick-pick all tasks in the factory |
-| **Devory: Create Task** | Create a new task via a guided prompt |
-| **Devory: Move Task** | Change a task's status |
-| **Devory: Promote Task** | Promote `backlog -> ready`, `ready -> doing`, or `doing -> review` |
-| **Devory: Open Review Queue** | Jump into the current review lane |
-| **Devory: Approve Review Task** | Approve a review task and move it to `done` |
-| **Devory: Send Review Task Back** | Send a review task back to `doing` |
-| **Devory: Block Review Task** | Block a review task with a required reason |
-| **Devory: Requeue Blocked Task** | Move a blocked task back to `ready` |
-| **Devory: Archive Task** | Move an active task to `archived` |
-| **Devory: Create Doctrine File** | Create a doctrine markdown file inside `doctrine/` |
-| **Devory: Create Skill** | Scaffold `skills/<name>/SKILL.md` |
-| **Devory: Archive Doctrine File** | Move a doctrine file into `doctrine/archive/` |
-| **Devory: Archive Skill** | Move a skill into `skills/archive/` |
-| **Devory: Start Factory Run** | Kick off a new AI factory run |
-| **Devory: Resume Factory Run** | Resume a failed or paused run |
-| **Devory: Inspect Recent Runs** | Browse recent run logs |
-| **Devory: Inspect Artifacts** | Explore generated artifacts |
-| **Devory: Refresh Task Explorer** | Reload the task and factory trees |
+| `Devory: Initialize Workspace` | Create the Devory workspace structure |
+| `Devory: Create Task` | Add a new task |
+| `Devory: Promote Task` | Move work forward through the lifecycle |
+| `Devory: Start Factory Run` | Execute Devory from the bundled runtime |
+| `Devory: Open Review Queue` | Jump into review-ready work |
+| `Devory: Inspect Artifacts` | Browse saved execution outputs |
 
-## Requirements
+## Workspace Shape
 
-- A Devory workspace with `tasks/`, `runs/`, and `artifacts/` folders
-- Node.js 18+
-- For packaged `.vsix` installs: no workspace-local runtime is required for task management or run start
+The extension works directly against the repo:
 
-## Configuration
+- `tasks/` for work
+- `runs/` for run records
+- `artifacts/` for durable execution output
+- `doctrine/` and `skills/` for engineering guidance and reuse
 
-| Setting | Default | Description |
-|---|---|---|
-| `devory.factoryRoot` | *(auto-detect)* | Absolute path to your Devory workspace root. Leave blank to auto-detect from your workspace. |
-
-## Getting Started
-
-1. Open your Devory workspace in VS Code or Cursor.
-2. Install this extension.
-3. Use **Devory: Initialize Workspace** if the workspace has not been scaffolded yet.
-
-## Runtime Notes
-
-- Task creation and task movement run in-process through the shared workspace APIs bundled with the extension.
-- Factory runs execute through the runtime bundled inside the extension at `runtime/`.
-- The package step validates that the generated `.vsix` actually contains the bundled runtime before treating it as release-ready.
