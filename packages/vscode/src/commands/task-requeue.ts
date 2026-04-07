@@ -1,7 +1,7 @@
 /**
  * packages/vscode/src/commands/task-requeue.ts
  *
- * devory.taskRequeue — move a blocked task back to ready.
+ * devory.taskRequeue — move a blocked or archived task back into the active queue.
  */
 
 import * as path from "path";
@@ -26,6 +26,13 @@ export async function taskRequeueCommand(
   const directTarget = resolveTaskTarget(tasksDir, target) ?? resolveActiveEditorTask(tasksDir);
   if (directTarget) {
     const relPath = path.relative(factoryRoot, directTarget.filepath).replace(/\\/g, "/");
+    const toStage =
+      directTarget.stage === "archived"
+        ? await vscode.window.showQuickPick([{ label: "backlog" }, { label: "ready" }], {
+            title: `Devory: Restore ${directTarget.id} to`,
+          })
+        : null;
+    if (directTarget.stage === "archived" && !toStage) return;
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -33,7 +40,12 @@ export async function taskRequeueCommand(
       },
       async () => {
         const result = runTaskRequeueWorkflow(
-          { task: relPath, label: directTarget.id, fromStage: directTarget.stage },
+          {
+            task: relPath,
+            label: directTarget.id,
+            fromStage: directTarget.stage,
+            toStage: toStage?.label as "backlog" | "ready" | undefined,
+          },
           { factoryRoot, onChanged }
         );
         if (!result.ok) {
@@ -46,9 +58,12 @@ export async function taskRequeueCommand(
     return;
   }
 
-  const tasks = listTasksInStage(tasksDir, "blocked");
+  const tasks = [
+    ...listTasksInStage(tasksDir, "blocked"),
+    ...listTasksInStage(tasksDir, "archived"),
+  ];
   if (tasks.length === 0) {
-    vscode.window.showInformationMessage("Devory: no blocked tasks are available to requeue.");
+    vscode.window.showInformationMessage("Devory: no blocked or archived tasks are available to requeue.");
     return;
   }
 
@@ -59,8 +74,8 @@ export async function taskRequeueCommand(
       detail: task.filepath,
     })),
     {
-      title: "Devory: Requeue Blocked Task",
-      placeHolder: "Select a blocked task to move back to ready",
+      title: "Devory: Requeue Task",
+      placeHolder: "Select a blocked or archived task to restore",
       matchOnDescription: true,
     }
   );
@@ -68,6 +83,14 @@ export async function taskRequeueCommand(
   if (!pickedTask?.detail) return;
 
   const relPath = path.relative(factoryRoot, pickedTask.detail).replace(/\\/g, "/");
+  const fromStage = tasks.find((task) => task.filepath === pickedTask.detail)?.stage ?? "blocked";
+  const toStage =
+    fromStage === "archived"
+      ? await vscode.window.showQuickPick([{ label: "backlog" }, { label: "ready" }], {
+          title: `Devory: Restore ${pickedTask.label} to`,
+        })
+      : null;
+  if (fromStage === "archived" && !toStage) return;
 
   await vscode.window.withProgress(
     {
@@ -76,7 +99,12 @@ export async function taskRequeueCommand(
     },
     async () => {
       const result = runTaskRequeueWorkflow(
-        { task: relPath, label: pickedTask.label, fromStage: "blocked" },
+        {
+          task: relPath,
+          label: pickedTask.label,
+          fromStage,
+          toStage: toStage?.label as "backlog" | "ready" | undefined,
+        },
         { factoryRoot, onChanged }
       );
       if (!result.ok) {

@@ -21,14 +21,29 @@ export class StageItem extends vscode.TreeItem {
     public readonly stage: LifecycleStage,
     public readonly count: number
   ) {
+    const isEmptyBacklog = stage === "backlog" && count === 0;
     super(
       `${stage}  (${count})`,
       count > 0
         ? vscode.TreeItemCollapsibleState.Collapsed
-        : vscode.TreeItemCollapsibleState.None
+        : isEmptyBacklog
+          ? vscode.TreeItemCollapsibleState.Expanded
+          : vscode.TreeItemCollapsibleState.None
     );
     this.contextValue = `stage.${stage}`;
-    this.iconPath = new vscode.ThemeIcon("folder");
+    this.iconPath = new vscode.ThemeIcon(stage === "archived" ? "archive" : "folder");
+  }
+}
+
+class PlaceholderItem extends vscode.TreeItem {
+  constructor(label: string, commandId: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = "placeholder";
+    this.iconPath = new vscode.ThemeIcon("add");
+    this.command = {
+      command: commandId,
+      title: label,
+    };
   }
 }
 
@@ -54,10 +69,10 @@ export class TaskItem extends vscode.TreeItem {
 // ── Provider ─────────────────────────────────────────────────────────────────
 
 export class TaskTreeProvider
-  implements vscode.TreeDataProvider<StageItem | TaskItem>
+  implements vscode.TreeDataProvider<StageItem | TaskItem | PlaceholderItem>
 {
   private _onDidChangeTreeData = new vscode.EventEmitter<
-    StageItem | TaskItem | undefined
+    StageItem | TaskItem | PlaceholderItem | undefined
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
@@ -73,13 +88,13 @@ export class TaskTreeProvider
     this._onDidChangeTreeData.fire(undefined);
   }
 
-  getTreeItem(element: StageItem | TaskItem): vscode.TreeItem {
+  getTreeItem(element: StageItem | TaskItem | PlaceholderItem): vscode.TreeItem {
     return element;
   }
 
   getChildren(
-    element?: StageItem | TaskItem
-  ): Thenable<(StageItem | TaskItem)[]> {
+    element?: StageItem | TaskItem | PlaceholderItem
+  ): Thenable<(StageItem | TaskItem | PlaceholderItem)[]> {
     if (!this.tasksDir) {
       return Promise.resolve([]);
     }
@@ -97,6 +112,9 @@ export class TaskTreeProvider
     if (element instanceof StageItem) {
       // Stage level: tasks within this stage
       const tasks = listTasksInStage(this.tasksDir, element.stage);
+      if (tasks.length === 0 && element.stage === "backlog") {
+        return Promise.resolve([new PlaceholderItem("Create your first task →", "devory.taskCreate")]);
+      }
       return Promise.resolve(tasks.map((t) => new TaskItem(t)));
     }
 

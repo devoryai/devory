@@ -87,6 +87,9 @@ export interface TaskPlanningDraft extends PlanningDraftBase {
   priority: string;
   status: TaskDraftCommitStage;
   agent: string;
+  external_source?: ExternalWorkItemSource;
+  external_key?: string;
+  external_url?: string;
   depends_on: string[];
   files_likely_affected: string[];
   verification: string[];
@@ -101,10 +104,11 @@ export interface TaskPlanningDraft extends PlanningDraftBase {
   expected_artifacts: string[];
   failure_conditions: string[];
   reviewer_checklist: string[];
+  inferred_fields?: string[];
 }
 
+import type { ExternalWorkItemSource } from "./external-work-item.ts";
 export type PlanningDraft = EpicPlanningDraft | TaskPlanningDraft;
-
 export interface RenderedTaskDraftTarget {
   target_stage: TaskDraftCommitStage;
   target_path: string;
@@ -361,6 +365,9 @@ export function buildTaskPlanningDraftFixture(
   const title =
     overrides.title ?? "Define the structured planning draft model for epics and tasks";
   const status = overrides.status ?? "backlog";
+  const externalSource = overrides.external_source;
+  const externalKey = overrides.external_key;
+  const externalUrl = overrides.external_url;
   const artifactPath =
     overrides.storage?.artifact_path ??
     buildPlanningDraftArtifactPath("task", taskId);
@@ -381,11 +388,14 @@ export function buildTaskPlanningDraftFixture(
     priority: overrides.priority ?? "high",
     status,
     agent: overrides.agent ?? "backend-builder",
+    ...(externalSource ? { external_source: externalSource } : {}),
+    ...(externalKey ? { external_key: externalKey } : {}),
+    ...(externalUrl ? { external_url: externalUrl } : {}),
     depends_on: overrides.depends_on ?? [],
     files_likely_affected:
       overrides.files_likely_affected ?? [
-        "/home/bridger/dev/devory/docs/adr/",
-        "/home/bridger/dev/devory/packages/core/src/",
+        "docs/adr/",
+        "packages/core/src/",
       ],
     verification: overrides.verification ?? [
       "npm run validate:task -- tasks/backlog/factory-181.md",
@@ -498,6 +508,13 @@ export function normalizePlanningDraft(value: unknown): PlanningDraft | null {
     return null;
   }
 
+  const externalSource =
+    record.external_source === "github-issue" || record.external_source === "jira"
+      ? (record.external_source as ExternalWorkItemSource)
+      : undefined;
+  const externalKey = asOptionalString(record.external_key);
+  const externalUrl = asOptionalString(record.external_url);
+
   return {
     ...base,
     kind: "task",
@@ -508,6 +525,9 @@ export function normalizePlanningDraft(value: unknown): PlanningDraft | null {
     priority,
     status: normalizeCommitStage(record.status) ?? "backlog",
     agent,
+    ...(externalSource ? { external_source: externalSource } : {}),
+    ...(externalKey ? { external_key: externalKey } : {}),
+    ...(externalUrl ? { external_url: externalUrl } : {}),
     depends_on: asStringArray(record.depends_on),
     files_likely_affected: asStringArray(record.files_likely_affected),
     verification: asStringArray(record.verification),

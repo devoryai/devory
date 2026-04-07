@@ -1,0 +1,295 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-03-11T00:00:00.000Z",
+  "models": [
+    {
+      "model_id": "claude-sonnet-4-6",
+      "provider": "anthropic",
+      "display_name": "Claude Sonnet 4.6",
+      "enabled": true,
+      "capabilities": [
+        "planning",
+        "coding",
+        "refactoring",
+        "review",
+        "testing",
+        "documentation",
+        "long-context-analysis",
+        "architecture",
+        "summarization",
+        "debugging"
+      ],
+      "preferred_task_types": [
+        "feature",
+        "documentation",
+        "test",
+        "refactor",
+        "bugfix",
+        "subtask",
+        "analysis"
+      ],
+      "context_window": 200000,
+      "cost_tier": "medium",
+      "speed_tier": "fast",
+      "quality_tier": "high",
+      "fallback_eligible": false,
+      "execution_modes": [
+        "claude"
+      ],
+      "notes": "Primary implementation model for current Claude-backed execution."
+    },
+    {
+      "model_id": "claude-opus-4-1",
+      "provider": "anthropic",
+      "display_name": "Claude Opus 4.1",
+      "enabled": false,
+      "capabilities": [
+        "planning",
+        "coding",
+        "refactoring",
+        "review",
+        "testing",
+        "documentation",
+        "long-context-analysis",
+        "architecture",
+        "summarization",
+        "debugging"
+      ],
+      "preferred_task_types": [
+        "architecture",
+        "analysis",
+        "review"
+      ],
+      "context_window": 200000,
+      "cost_tier": "high",
+      "speed_tier": "medium",
+      "quality_tier": "premium",
+      "fallback_eligible": false,
+      "execution_modes": [
+        "claude"
+      ],
+      "notes": "Reserved for future higher-depth routing once scoring heuristics exist."
+    },
+    {
+      "model_id": "gpt-5-mini",
+      "provider": "openai",
+      "display_name": "GPT-5 Mini",
+      "enabled": true,
+      "capabilities": [
+        "planning",
+        "coding",
+        "refactoring",
+        "review",
+        "testing",
+        "documentation",
+        "long-context-analysis",
+        "architecture",
+        "summarization",
+        "debugging"
+      ],
+      "preferred_task_types": [
+        "feature",
+        "documentation",
+        "test",
+        "refactor",
+        "bugfix",
+        "subtask",
+        "analysis"
+      ],
+      "context_window": 400000,
+      "cost_tier": "medium",
+      "speed_tier": "fast",
+      "quality_tier": "high",
+      "fallback_eligible": false,
+      "execution_modes": [
+        "openai"
+      ],
+      "notes": "Primary OpenAI implementation model for live factory execution."
+    },
+    {
+      "model_id": "github-copilot-cli",
+      "provider": "github",
+      "display_name": "GitHub Copilot CLI",
+      "enabled": true,
+      "capabilities": [
+        "coding",
+        "refactoring",
+        "testing",
+        "documentation",
+        "debugging"
+      ],
+      "preferred_task_types": [
+        "feature",
+        "bugfix",
+        "test",
+        "refactor",
+        "subtask"
+      ],
+      "context_window": 128000,
+      "cost_tier": "medium",
+      "speed_tier": "fast",
+      "quality_tier": "high",
+      "fallback_eligible": false,
+      "execution_modes": [
+        "copilot"
+      ],
+      "notes": "Thin adapter around the official GitHub Copilot CLI for single-stage implementation runs."
+    },
+    {
+      "model_id": "qwen2.5-coder:7b",
+      "provider": "ollama",
+      "display_name": "Qwen 2.5 Coder 7B (Ollama)",
+      "enabled": true,
+      "capabilities": [
+        "coding",
+        "refactoring",
+        "testing",
+        "documentation",
+        "debugging"
+      ],
+      "preferred_task_types": [
+        "feature",
+        "bugfix",
+        "test",
+        "refactor",
+        "subtask"
+      ],
+      "context_window": 32768,
+      "cost_tier": "free",
+      "speed_tier": "fast",
+      "quality_tier": "high",
+      "fallback_eligible": false,
+      "execution_modes": [
+        "ollama"
+      ],
+      "notes": "Primary self-hosted coding model for local Ollama-backed implementation runs."
+    },
+    {
+      "model_id": "llama3.1:8b",
+      "provider": "ollama",
+      "display_name": "Llama 3.1 8B (Ollama)",
+      "enabled": true,
+      "capabilities": [
+        "planning",
+        "coding",
+        "refactoring",
+        "testing",
+        "documentation",
+        "summarization",
+        "debugging"
+      ],
+      "preferred_task_types": [
+        "feature",
+        "bugfix",
+        "test",
+        "documentation",
+        "subtask"
+      ],
+      "context_window": 131072,
+      "cost_tier": "free",
+      "speed_tier": "medium",
+      "quality_tier": "standard",
+      "fallback_eligible": true,
+      "execution_modes": [
+        "ollama"
+      ],
+      "notes": "Default self-hosted model for container deployments. Requires Ollama at OLLAMA_BASE_URL."
+    },
+    {
+      "model_id": "llama3.1:70b",
+      "provider": "ollama",
+      "display_name": "Llama 3.1 70B (Ollama)",
+      "enabled": false,
+      "capabilities": [
+        "planning",
+        "coding",
+        "refactoring",
+        "review",
+        "testing",
+        "documentation",
+        "architecture",
+        "summarization",
+        "debugging"
+      ],
+      "preferred_task_types": [
+        "feature",
+        "architecture",
+        "review",
+        "refactor",
+        "analysis"
+      ],
+      "context_window": 131072,
+      "cost_tier": "free",
+      "speed_tier": "slow",
+      "quality_tier": "high",
+      "fallback_eligible": false,
+      "execution_modes": [
+        "ollama"
+      ],
+      "notes": "Disabled by default in this workspace because the model is not installed on the configured Ollama host."
+    },
+    {
+      "model_id": "codestral:latest",
+      "provider": "ollama",
+      "display_name": "Codestral (Ollama)",
+      "enabled": false,
+      "capabilities": [
+        "coding",
+        "refactoring",
+        "testing",
+        "debugging"
+      ],
+      "preferred_task_types": [
+        "feature",
+        "bugfix",
+        "test",
+        "refactor",
+        "subtask"
+      ],
+      "context_window": 32768,
+      "cost_tier": "free",
+      "speed_tier": "fast",
+      "quality_tier": "high",
+      "fallback_eligible": false,
+      "execution_modes": [
+        "ollama"
+      ],
+      "notes": "Disabled by default in this workspace because the model is not installed on the configured Ollama host."
+    },
+    {
+      "model_id": "factory-dry-run",
+      "provider": "internal",
+      "display_name": "Factory Dry Run",
+      "enabled": true,
+      "capabilities": [
+        "planning",
+        "coding",
+        "refactoring",
+        "review",
+        "testing",
+        "documentation",
+        "summarization"
+      ],
+      "preferred_task_types": [
+        "epic",
+        "analysis",
+        "documentation",
+        "feature",
+        "test",
+        "refactor",
+        "bugfix",
+        "subtask",
+        "architecture"
+      ],
+      "context_window": 0,
+      "cost_tier": "free",
+      "speed_tier": "very-fast",
+      "quality_tier": "basic",
+      "fallback_eligible": true,
+      "execution_modes": [
+        "dry-run"
+      ],
+      "notes": "Safe fallback path that produces deterministic packet, workspace, and stub artifacts without live model execution."
+    }
+  ]
+}

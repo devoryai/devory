@@ -28,6 +28,11 @@ import { runInspectCommand } from "./commands/run-inspect.js";
 import { artifactInspectCommand } from "./commands/artifact-inspect.js";
 import { factoryDoctorCommand } from "./commands/factory-doctor.js";
 import { initWorkspaceCommand } from "./commands/init-workspace.js";
+import { doctrineCreateCommand } from "./commands/doctrine-create.js";
+import { skillCreateCommand } from "./commands/skill-create.js";
+import { doctrineArchiveCommand } from "./commands/doctrine-archive.js";
+import { skillArchiveCommand } from "./commands/skill-archive.js";
+import { taskArchiveCommand } from "./commands/task-archive.js";
 import {
   shouldShowBootstrap,
   markFirstRunComplete,
@@ -222,6 +227,52 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       taskRequeueCommand(root, getFactoryPaths(root).tasksDir, () => treeProvider.refresh(), target);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.taskArchive", (target) => {
+      const root = getFactoryRoot();
+      const capabilities = detectWorkspaceCapabilities(root, runtimeRoot);
+      const blockedMessage = getUnsupportedCommandMessage("taskMove", capabilities);
+      if (blockedMessage) {
+        vscode.window.showInformationMessage(blockedMessage);
+        return;
+      }
+      const { tasksDir } = getFactoryPaths(root);
+      taskArchiveCommand(root, tasksDir, () => treeProvider.refresh(), target);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.doctrineCreate", () => {
+      doctrineCreateCommand(getFactoryRoot(), () => factoryTreeProvider.refresh());
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.skillCreate", () => {
+      skillCreateCommand(getFactoryRoot(), runtimeRoot, () => factoryTreeProvider.refresh());
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.doctrineArchive", (target) => {
+      if (!target?.filePath) {
+        vscode.window.showInformationMessage("Devory: select a doctrine file to archive.");
+        return;
+      }
+      doctrineArchiveCommand(getFactoryRoot(), target.filePath, () => factoryTreeProvider.refresh());
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.skillArchive", (target) => {
+      if (!target?.skillMdPath) {
+        vscode.window.showInformationMessage("Devory: select a skill to archive.");
+        return;
+      }
+      skillArchiveCommand(getFactoryRoot(), target.skillMdPath, () => factoryTreeProvider.refresh());
     })
   );
 

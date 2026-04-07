@@ -1,7 +1,7 @@
 {
   "name": "@devory/cli",
   "version": "0.3.0",
-  "description": "Devory CLI — formal command interface for Devory",
+  "description": "Devory CLI \u2014 formal command interface for Devory",
   "repository": {
     "type": "git",
     "url": "https://github.com/devoryai/devory"
@@ -13,7 +13,7 @@
   },
   "files": [
     "dist/",
-    "src/",
+    "src/index.ts",
     "README.md"
   ],
   "bin": {

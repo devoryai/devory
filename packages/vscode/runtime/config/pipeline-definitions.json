@@ -1,0 +1,100 @@
+{
+  "version": "1",
+  "generated_at": "2026-03-10T00:00:00.000Z",
+  "default_pipeline": "single-stage-implementation",
+  "pipelines": [
+    {
+      "pipeline_id": "single-stage-implementation",
+      "display_name": "Single Stage Implementation",
+      "execution_modes": ["claude", "openai", "ollama", "copilot", "dry-run"],
+      "stages": [
+        {
+          "stage": "coder",
+          "required_capabilities": ["coding"],
+          "preferred_capabilities": ["debugging", "testing"],
+          "output_artifact_type": "implementation-summary",
+          "handoff_input": "task",
+          "on_failure": "halt",
+          "allow_fallback_models": true
+        }
+      ]
+    },
+    {
+      "pipeline_id": "planner-coder-reviewer",
+      "display_name": "Planner Coder Reviewer",
+      "execution_modes": ["claude", "openai", "dry-run"],
+      "stages": [
+        {
+          "stage": "planner",
+          "required_capabilities": ["planning"],
+          "preferred_capabilities": ["architecture", "summarization"],
+          "output_artifact_type": "stage-plan",
+          "handoff_input": "task",
+          "on_failure": "halt",
+          "allow_fallback_models": true
+        },
+        {
+          "stage": "coder",
+          "required_capabilities": ["coding"],
+          "preferred_capabilities": ["debugging", "testing"],
+          "output_artifact_type": "implementation-summary",
+          "handoff_input": "previous_stage",
+          "on_failure": "halt",
+          "allow_fallback_models": true
+        },
+        {
+          "stage": "reviewer",
+          "required_capabilities": ["review"],
+          "preferred_capabilities": ["testing", "documentation"],
+          "output_artifact_type": "review-notes",
+          "handoff_input": "previous_stage",
+          "on_failure": "halt",
+          "allow_fallback_models": true
+        }
+      ]
+    },
+    {
+      "pipeline_id": "planner-coder-reviewer-fixer",
+      "display_name": "Planner Coder Reviewer Fixer",
+      "execution_modes": ["claude", "openai", "dry-run"],
+      "stages": [
+        {
+          "stage": "planner",
+          "required_capabilities": ["planning"],
+          "preferred_capabilities": ["architecture", "summarization"],
+          "output_artifact_type": "stage-plan",
+          "handoff_input": "task",
+          "on_failure": "halt",
+          "allow_fallback_models": true
+        },
+        {
+          "stage": "coder",
+          "required_capabilities": ["coding"],
+          "preferred_capabilities": ["debugging", "testing"],
+          "output_artifact_type": "implementation-summary",
+          "handoff_input": "previous_stage",
+          "on_failure": "halt",
+          "allow_fallback_models": true
+        },
+        {
+          "stage": "reviewer",
+          "required_capabilities": ["review"],
+          "preferred_capabilities": ["testing", "documentation"],
+          "output_artifact_type": "review-notes",
+          "handoff_input": "previous_stage",
+          "on_failure": "halt",
+          "allow_fallback_models": true
+        },
+        {
+          "stage": "fixer",
+          "required_capabilities": ["refactoring"],
+          "preferred_capabilities": ["debugging", "coding"],
+          "output_artifact_type": "fix-summary",
+          "handoff_input": "previous_stage",
+          "on_failure": "halt",
+          "allow_fallback_models": true
+        }
+      ]
+    }
+  ]
+}

@@ -81,19 +81,20 @@ export function runTaskPromoteWorkflow(
 }
 
 export function runTaskRequeueWorkflow(
-  args: { task: string; label: string; fromStage: string },
+  args: { task: string; label: string; fromStage: string; toStage?: "backlog" | "ready" },
   deps: TaskControlWorkflowDeps
 ): TaskControlWorkflowResult {
-  if (args.fromStage !== "blocked") {
+  if (args.fromStage !== "blocked" && args.fromStage !== "archived") {
     return {
       ok: false,
-      error: "Devory: only blocked tasks can be requeued.",
+      error: "Devory: only blocked or archived tasks can be requeued.",
     };
   }
 
+  const targetStage = args.fromStage === "archived" ? (args.toStage ?? "backlog") : "ready";
   const moveTaskImpl = deps.moveTaskImpl ?? moveTask;
   const result = moveTaskImpl(
-    { task: args.task, to: "ready" },
+    { task: args.task, to: targetStage },
     { factoryRoot: deps.factoryRoot }
   );
 
@@ -108,7 +109,7 @@ export function runTaskRequeueWorkflow(
   deps.onChanged?.();
   return {
     ok: true,
-    message: `Devory: requeued ${args.label} → ready.`,
+    message: `Devory: requeued ${args.label} → ${targetStage}.`,
   };
 }
 

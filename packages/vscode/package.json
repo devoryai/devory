@@ -80,6 +80,28 @@
         "title": "Devory: Factory Doctor"
       },
       {
+        "command": "devory.doctrineCreate",
+        "title": "Devory: Create Doctrine File",
+        "icon": "$(add)"
+      },
+      {
+        "command": "devory.skillCreate",
+        "title": "Devory: Create Skill",
+        "icon": "$(add)"
+      },
+      {
+        "command": "devory.doctrineArchive",
+        "title": "Devory: Archive Doctrine File"
+      },
+      {
+        "command": "devory.skillArchive",
+        "title": "Devory: Archive Skill"
+      },
+      {
+        "command": "devory.taskArchive",
+        "title": "Devory: Archive Task"
+      },
+      {
         "command": "devory.refresh",
         "title": "Devory: Refresh Task Explorer",
         "icon": "$(refresh)"
@@ -113,6 +135,16 @@
           "command": "devory.factoryDoctor",
           "when": "view == devoryFactoryExplorer",
           "group": "navigation"
+        },
+        {
+          "command": "devory.skillCreate",
+          "when": "view == devoryFactoryExplorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "devory.doctrineCreate",
+          "when": "view == devoryFactoryExplorer",
+          "group": "navigation@1"
         },
         {
           "command": "devory.taskCreate",
@@ -175,6 +207,36 @@
           "command": "devory.reviewQueue",
           "when": "view == devoryTaskExplorer && viewItem == task.review",
           "group": "navigation@3"
+        },
+        {
+          "command": "devory.taskRequeue",
+          "when": "view == devoryTaskExplorer && viewItem == task.archived",
+          "group": "inline"
+        },
+        {
+          "command": "devory.taskArchive",
+          "when": "view == devoryTaskExplorer && viewItem =~ /^task\\.(backlog|ready|doing|review|blocked)$/",
+          "group": "navigation@4"
+        },
+        {
+          "command": "devory.doctrineCreate",
+          "when": "view == devoryFactoryExplorer && viewItem == devoryGroup.doctrine",
+          "group": "inline"
+        },
+        {
+          "command": "devory.skillCreate",
+          "when": "view == devoryFactoryExplorer && viewItem == devoryGroup.skills",
+          "group": "inline"
+        },
+        {
+          "command": "devory.doctrineArchive",
+          "when": "view == devoryFactoryExplorer && viewItem == devoryDoctrineFile",
+          "group": "navigation@1"
+        },
+        {
+          "command": "devory.skillArchive",
+          "when": "view == devoryFactoryExplorer && viewItem == devorySkill",
+          "group": "navigation@1"
         }
       ],
       "editor/title": [
@@ -200,13 +262,18 @@
         },
         {
           "command": "devory.taskRequeue",
-          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/blocked\\//",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/(blocked|archived)\\//",
           "group": "navigation@14"
+        },
+        {
+          "command": "devory.taskArchive",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/(backlog|ready|doing|review|blocked)\\//",
+          "group": "navigation@15"
         },
         {
           "command": "devory.reviewQueue",
           "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/review\\//",
-          "group": "navigation@15"
+          "group": "navigation@16"
         }
       ]
     },
@@ -272,8 +339,8 @@
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --format=cjs",
     "prepackage": "npm run build",
-    "package": "vsce package --no-dependencies --allow-missing-repository",
-    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts src/test/task-create.test.ts src/test/task-move.test.ts src/test/task-control.test.ts src/test/control-command-flow.test.ts src/test/contributions.test.ts src/test/capabilities.test.ts src/test/run-adapter.test.ts src/test/find-devory-cli.test.ts src/test/seed-starter.test.ts"
+    "package": "vsce package --no-dependencies --allow-missing-repository && npx tsx ../../scripts/validate-vsix-runtime.ts",
+    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts src/test/task-create.test.ts src/test/task-move.test.ts src/test/task-control.test.ts src/test/control-command-flow.test.ts src/test/contributions.test.ts src/test/capabilities.test.ts src/test/run-adapter.test.ts src/test/find-devory-cli.test.ts src/test/seed-starter.test.ts src/test/factory-content.test.ts"
   },
   "dependencies": {
     "@devory/cli": "*",

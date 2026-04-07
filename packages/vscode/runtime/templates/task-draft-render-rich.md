@@ -16,8 +16,8 @@ bundle_phase: contract
 depends_on:
   - factory-181
 files_likely_affected:
-  - /home/bridger/dev/devory/packages/core/src/
-  - /home/bridger/dev/devory/templates/
+  - packages/core/src/
+  - templates/
 verification:
   - npm run validate:task -- tasks/backlog/factory-184.md
   - npm run test

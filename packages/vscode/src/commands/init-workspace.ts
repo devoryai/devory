@@ -10,7 +10,7 @@ import { seedStarterFiles } from "../lib/seed-starter.js";
 // Used as a fallback when the CLI is not installed.
 // ---------------------------------------------------------------------------
 
-const TASK_STAGES = ["backlog", "ready", "doing", "review", "done", "blocked"];
+const TASK_STAGES = ["backlog", "ready", "doing", "review", "done", "blocked", "archived"];
 
 const STANDARDS_TEMPLATE = `# devory.standards.yml
 #
@@ -94,6 +94,7 @@ All work must:
 ## Task lifecycle
 
 Tasks move through: backlog → ready → doing → review → done
+Support stages: blocked, archived
 `;
 
 /**
@@ -205,7 +206,7 @@ export async function initWorkspaceCommand(
         if ((err as NodeJS.ErrnoException).code === "ENOENT") {
           vscode.window.showErrorMessage(
             `Devory: CLI binary not executable at ${cliBin}. ` +
-              "Try reinstalling with `npm install -g devory`."
+              "Try reinstalling with `npm install -g @devory/cli`."
           );
         } else {
           vscode.window.showErrorMessage(`Devory: init failed — ${err.message}`);
@@ -255,12 +256,22 @@ function finalize(
   refreshTaskTree: () => void,
   refreshRunTree: () => void
 ): void {
+  let seededSummary:
+    | {
+        doctrine: string[];
+        skills: string[];
+      }
+    | null = null;
   if (runtimeRoot) {
-    seedStarterFiles(cwd, runtimeRoot, outputChannel);
+    seededSummary = seedStarterFiles(cwd, runtimeRoot, outputChannel);
   }
   refreshTaskTree();
   refreshRunTree();
+  const seededSuffix =
+    seededSummary && (seededSummary.doctrine.length > 0 || seededSummary.skills.length > 0)
+      ? ` Starter doctrine: ${seededSummary.doctrine.slice(0, 2).join(", ")}. Starter skills: ${seededSummary.skills.slice(0, 2).join(", ")}. Open Devory: Factory to inspect them.`
+      : "";
   vscode.window.showInformationMessage(
-    "Devory: Workspace initialized. Tasks and run folders are ready."
+    `Devory: Workspace initialized. Tasks and run folders are ready.${seededSuffix}`
   );
 }

@@ -37,6 +37,7 @@ export const LIFECYCLE_STAGES = [
   "doing",
   "review",
   "blocked",
+  "archived",
   "done",
 ] as const;
 
@@ -49,6 +50,7 @@ export const LIFECYCLE_DIR_MAP: Record<LifecycleStage, string> = {
   doing: "tasks/doing",
   review: "tasks/review",
   blocked: "tasks/blocked",
+  archived: "tasks/archived",
   done: "tasks/done",
 };
 
@@ -125,11 +127,12 @@ function renderTransitionLog(opts: TransitionLogOpts): string {
 }
 
 export const VALID_TRANSITIONS = {
-  backlog: ["ready", "blocked"],
-  ready: ["doing", "blocked", "backlog"],
-  doing: ["review", "blocked", "ready"],
-  review: ["done", "doing", "blocked"],
-  blocked: ["backlog", "ready"],
+  backlog: ["ready", "blocked", "archived"],
+  ready: ["doing", "blocked", "backlog", "archived"],
+  doing: ["review", "blocked", "ready", "archived"],
+  review: ["done", "doing", "blocked", "archived"],
+  blocked: ["backlog", "ready", "archived"],
+  archived: ["backlog", "ready"],
   done: [],
 } as const satisfies Record<LifecycleStage, readonly LifecycleStage[]>;
 

@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-03-11T00:00:00.000Z",
+  "default_environment": "default",
+  "environments": {
+    "default": {
+      "allowed_cost_tiers": ["free", "low", "medium", "high"],
+      "warned_cost_tiers": ["medium"],
+      "blocked_cost_tiers": [],
+      "default_task_max_cost_tier": "medium",
+      "default_run_max_cost_tier": "high",
+      "default_run_budget_units": 6,
+      "enforcement_mode": "block",
+      "stage_policies": {
+        "implementation": {
+          "max_cost_tier": "medium",
+          "enforcement_mode": "block"
+        },
+        "review": {
+          "max_cost_tier": "medium",
+          "enforcement_mode": "warn"
+        },
+        "analysis": {
+          "max_cost_tier": "high",
+          "enforcement_mode": "warn"
+        }
+      }
+    },
+    "restricted": {
+      "allowed_cost_tiers": ["free", "low", "medium"],
+      "warned_cost_tiers": ["medium"],
+      "blocked_cost_tiers": ["high"],
+      "default_task_max_cost_tier": "low",
+      "default_run_max_cost_tier": "medium",
+      "default_run_budget_units": 3,
+      "enforcement_mode": "block",
+      "stage_policies": {
+        "implementation": {
+          "max_cost_tier": "low",
+          "enforcement_mode": "block"
+        },
+        "review": {
+          "max_cost_tier": "medium",
+          "enforcement_mode": "warn"
+        },
+        "analysis": {
+          "max_cost_tier": "medium",
+          "enforcement_mode": "block"
+        }
+      }
+    }
+  }
+}

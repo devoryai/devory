@@ -1,0 +1,18 @@
+# Devory default baseline: generic
+# Stack-agnostic engineering standards distilled from core Devory doctrine.
+# Referenced via: extends: "@devory/defaults/generic"
+
+version: "1"
+
+doctrine:
+  testing:
+    require_unit: true
+    require_integration: false
+    coverage_threshold: 80
+
+  architecture:
+    max_file_lines: 300
+    no_circular_deps: true
+
+  code_style:
+    prefer_explicit_over_clever: true

@@ -5,6 +5,11 @@ export interface OutputAppender {
   appendLine(line: string): void;
 }
 
+export interface SeedStarterSummary {
+  doctrine: string[];
+  skills: string[];
+}
+
 /**
  * Seeds starter doctrine and skill files into a fresh factory workspace.
  * Copies files from runtimeRoot/templates/starter/ into factoryRoot only when
@@ -17,11 +22,13 @@ export function seedStarterFiles(
   factoryRoot: string,
   runtimeRoot: string,
   output: OutputAppender
-): void {
+): SeedStarterSummary {
   const starterDoctrineDir = path.join(runtimeRoot, "templates", "starter", "doctrine");
   const starterSkillsDir = path.join(runtimeRoot, "templates", "starter", "skills");
   const targetDoctrineDir = path.join(factoryRoot, "doctrine");
   const targetSkillsDir = path.join(factoryRoot, "skills");
+  const seededDoctrine: string[] = [];
+  const seededSkills: string[] = [];
 
   try {
     // Seed doctrine only if no .md files already exist there
@@ -40,6 +47,7 @@ export function seedStarterFiles(
         const dest = path.join(targetDoctrineDir, file);
         if (!fs.existsSync(dest)) {
           fs.copyFileSync(path.join(starterDoctrineDir, file), dest);
+          seededDoctrine.push(file);
         }
       }
     }
@@ -69,12 +77,18 @@ export function seedStarterFiles(
             path.join(starterSkillsDir, skillDir.name, "SKILL.md"),
             skillMdDest
           );
+          seededSkills.push(skillDir.name);
         }
       }
     }
 
-    output.appendLine("Starter doctrine and skills copied.");
+    output.appendLine(
+      `Starter doctrine and skills copied. Doctrine: ${
+        seededDoctrine.length ? seededDoctrine.join(", ") : "(none added)"
+      }. Skills: ${seededSkills.length ? seededSkills.join(", ") : "(none added)"}.`
+    );
   } catch {
     // Seeding is best-effort; do not fail the overall init command
   }
+  return { doctrine: seededDoctrine, skills: seededSkills };
 }

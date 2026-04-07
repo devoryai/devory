@@ -1,0 +1,40 @@
+{
+  "$schema": "../config/connection.schema.json",
+  "_comment": "Copy to connection.json (gitignored) and fill in your values.",
+
+  "factoryRoot": {
+    "_comment": "Absolute path to the factory repo root. Leave unset to use auto-detection.",
+    "_env": "DEVORY_FACTORY_ROOT",
+    "value": ""
+  },
+
+  "github": {
+    "_comment": "GitHub connection settings. All fields are optional for local-only use.",
+
+    "token": {
+      "_comment": "Personal access token with repo scope. Set via env var — never commit the real token.",
+      "_env": "GITHUB_TOKEN",
+      "value": ""
+    },
+
+    "owner": {
+      "_comment": "GitHub org or user that owns the target repo (e.g. 'my-org').",
+      "value": ""
+    },
+
+    "repo": {
+      "_comment": "GitHub repo name (e.g. 'my-project'). Inferred from git remote when blank.",
+      "value": ""
+    }
+  },
+
+  "anthropic": {
+    "_comment": "Anthropic API credentials. Required only when running agents.",
+
+    "apiKey": {
+      "_comment": "Anthropic API key. Set via env var — never commit the real key.",
+      "_env": "ANTHROPIC_API_KEY",
+      "value": ""
+    }
+  }
+}

@@ -39,7 +39,7 @@ export function parseArgs(
   return { args: { dir, force }, error: null };
 }
 
-const TASK_STAGES = ["backlog", "ready", "doing", "review", "done", "blocked"];
+const TASK_STAGES = ["backlog", "ready", "doing", "review", "done", "blocked", "archived"];
 
 const STANDARDS_TEMPLATE = `# devory.standards.yml
 #

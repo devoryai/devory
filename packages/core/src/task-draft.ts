@@ -64,6 +64,9 @@ export function buildMinimalTaskDraftFixture(
     priority: overrides.priority ?? "high",
     status: overrides.status ?? "backlog",
     agent: overrides.agent ?? "backend-builder",
+    external_source: overrides.external_source,
+    external_key: overrides.external_key,
+    external_url: overrides.external_url,
     goal:
       overrides.goal ??
       "Define the minimum structured task draft that renders to valid Devory markdown.",
@@ -106,6 +109,9 @@ export function buildRichTaskDraftFixture(
     priority: overrides.priority ?? "high",
     status: overrides.status ?? "backlog",
     agent: overrides.agent ?? "backend-builder",
+    external_source: overrides.external_source,
+    external_key: overrides.external_key,
+    external_url: overrides.external_url,
     lane: overrides.lane ?? "planning",
     repo_area: overrides.repo_area ?? "authoring",
     bundle_id: overrides.bundle_id ?? "epic-planning-authoring",
@@ -114,8 +120,8 @@ export function buildRichTaskDraftFixture(
     depends_on: overrides.depends_on ?? ["factory-181"],
     files_likely_affected:
       overrides.files_likely_affected ?? [
-        "/home/bridger/dev/devory/packages/core/src/",
-        "/home/bridger/dev/devory/templates/",
+        "packages/core/src/",
+        "templates/",
       ],
     verification: overrides.verification ?? [
       "npm run validate:task -- tasks/backlog/factory-184.md",

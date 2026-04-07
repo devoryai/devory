@@ -75,11 +75,11 @@ export async function factoryDoctorCommand(
   } catch {
     doctorOutput.appendLine(
       "[Devory] ERROR: devory CLI not found. " +
-        "Install it with `npm install -g devory` or add it to your project dependencies."
+        "Install it with `npm install -g @devory/cli`, add it to your project dependencies, or use the built-in workspace setup where available."
     );
     doctorOutput.show(true);
     vscode.window.showErrorMessage(
-      "Devory Doctor: CLI not found. Install with `npm install -g devory` or add it to your project."
+      "Devory Doctor: CLI not found. Install `@devory/cli`, add it to your project, or use built-in setup where supported."
     );
     return;
   }

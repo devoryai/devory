@@ -60,7 +60,7 @@ export function parseArgs(argv: string[]): { args?: DoctorArgs; error: string | 
 // Individual checks
 // ---------------------------------------------------------------------------
 
-const EXPECTED_STAGES = ["backlog", "ready", "doing", "review", "done", "blocked"] as const;
+const EXPECTED_STAGES = ["backlog", "ready", "doing", "review", "done", "blocked", "archived"] as const;
 
 export function checkTaskStages(root: string): CheckResult {
   const tasksDir = path.join(root, "tasks");

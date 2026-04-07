@@ -18,6 +18,7 @@ export const LIFECYCLE_STAGES = [
   "doing",
   "review",
   "blocked",
+  "archived",
   "done",
 ] as const;
 
@@ -33,6 +34,7 @@ export interface TaskSummary {
   filepath: string;
   stage: LifecycleStage;
   bundle_id?: string;
+  modifiedAt: number;
 }
 
 export interface TaskDetail extends TaskSummary {
@@ -54,6 +56,7 @@ export function listTasksInStage(
     .map((filename) => {
       const filepath = path.join(dir, filename);
       const content = fs.readFileSync(filepath, "utf-8");
+      const stats = fs.statSync(filepath);
       const { meta } = parseFrontmatter(content);
       return {
         id: String(meta.id ?? filename.replace(".md", "")),
@@ -66,9 +69,14 @@ export function listTasksInStage(
         stage,
         bundle_id:
           typeof meta.bundle_id === "string" ? meta.bundle_id : undefined,
+        modifiedAt: stats.mtimeMs,
       };
     })
-    .sort((a, b) => a.id.localeCompare(b.id));
+    .sort((a, b) =>
+      stage === "done"
+        ? b.modifiedAt - a.modifiedAt || b.id.localeCompare(a.id)
+        : a.id.localeCompare(b.id)
+    );
 }
 
 /** List all tasks across all lifecycle stages. */
@@ -94,6 +102,7 @@ export function findTaskById(
     for (const filename of fs.readdirSync(dir).filter((f) => f.endsWith(".md"))) {
       const filepath = path.join(dir, filename);
       const content = fs.readFileSync(filepath, "utf-8");
+      const stats = fs.statSync(filepath);
       const { meta, body } = parseFrontmatter(content);
       const effectiveId = String(meta.id ?? filename.replace(".md", ""));
       if (effectiveId === id) {
@@ -106,6 +115,7 @@ export function findTaskById(
           filename,
           filepath,
           stage,
+          modifiedAt: stats.mtimeMs,
           meta,
           body,
         };
