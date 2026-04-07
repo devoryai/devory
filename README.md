@@ -31,11 +31,8 @@ From there:
 
 ## Plans
 
-Devory uses `Free`, `Pro`, and `Teams` as product plan language.
+Devory uses `Core`, `Pro`, and `Teams` as product plan language.
 
-- `Free`: local repo-first workflow and BYOK model usage
+- `Core`: local repo-first workflow and BYOK model usage
 - `Pro`: paid individual capabilities and advanced doctrine support
 - `Teams`: seats, roles, and shared governance
-
-Some runtime output still uses `Core` as the free-tier label.
-

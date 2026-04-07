@@ -41,7 +41,4 @@ npx @devory/cli init
 
 ## Plans
 
-User-facing plan names are `Free`, `Pro`, and `Teams`.
-
-The CLI may still report the free tier as `Core`. That is the runtime label for the same base non-paid plan.
-
+User-facing plan names are `Core`, `Pro`, and `Teams`.
