@@ -206,7 +206,7 @@ export async function initWorkspaceCommand(
         if ((err as NodeJS.ErrnoException).code === "ENOENT") {
           vscode.window.showErrorMessage(
             `Devory: CLI binary not executable at ${cliBin}. ` +
-              "Try reinstalling with `npm install -g @devory/cli`."
+              "Try reinstalling it, using a local project dependency, or using the built-in workspace setup."
           );
         } else {
           vscode.window.showErrorMessage(`Devory: init failed — ${err.message}`);
