@@ -138,6 +138,35 @@ const FACTORY_CONTEXT = `# Factory Context
 
 This file defines the context every AI worker loads before performing work in this Devory workspace.
 
+## Doctrine
+
+Doctrine files define the engineering rules every run must follow.
+The worker loads files listed below automatically — edit this list as your project grows.
+
+Always load these:
+
+- doctrine/engineering-principles.md
+- doctrine/testing-standard.md
+- doctrine/workflow-rules.md
+- doctrine/code-style.md
+
+Load when relevant:
+
+(add conditional doctrine files here)
+
+## Skills
+
+Skills are reusable procedure modules for specific kinds of work.
+Activate them from task frontmatter with a \`skills:\` declaration, for example:
+
+  skills: [test-generation]
+
+Starter skills included with this workspace:
+- skills/test-generation/SKILL.md    — write or extend tests for a module
+- skills/nextjs-component/SKILL.md   — create or refactor a Next.js component
+
+Skills live at \`skills/<name>/SKILL.md\` and are loaded after doctrine on every run that requests them.
+
 ## Standards
 
 This workspace uses \`devory.standards.yml\` to define engineering guardrails.
@@ -151,13 +180,6 @@ All work must:
 - include tests where practical
 - avoid unrelated scope changes
 - remain safe, reviewable, and reversible
-
-## Factory environment
-
-Root resolution and path layout are provided by \`@devory/core\`.
-
-- \`resolveFactoryRoot()\` — resolves via \`DEVORY_FACTORY_ROOT\` env, \`FACTORY_ROOT\` env, git-walk for \`FACTORY_CONTEXT.md\`, or cwd fallback
-- \`factoryPaths(root)\` — returns \`{ tasksDir, runsDir, artifactsDir, contextFile }\`
 
 ## Task lifecycle
 
