@@ -8,7 +8,11 @@
 import * as vscode from "vscode";
 import { startFactoryRun } from "../lib/run-adapter.js";
 
-export async function runStartCommand(factoryRoot: string, runtimeRoot: string): Promise<void> {
+export async function runStartCommand(
+  factoryRoot: string,
+  runtimeRoot: string,
+  runOutput: vscode.OutputChannel
+): Promise<void> {
   if (!factoryRoot) {
     vscode.window.showErrorMessage(
       "Devory: factory root not found. Set devory.factoryRoot in settings."
@@ -31,20 +35,17 @@ export async function runStartCommand(factoryRoot: string, runtimeRoot: string):
 
   const limit = limitStr.trim() ? Number(limitStr.trim()) : undefined;
 
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "Devory: starting factory run…",
-      cancellable: false,
-    },
-    async (progress) => {
-      progress.report({ message: "launching packaged runtime" });
-      const result = await startFactoryRun(factoryRoot, runtimeRoot, { limit });
-      if (!result.ok) {
-        vscode.window.showErrorMessage(result.message);
-      } else {
-        vscode.window.showInformationMessage(result.message);
-      }
-    }
+  runOutput.clear();
+  runOutput.appendLine(`[Devory] Starting factory run${limit !== undefined ? ` (limit: ${limit})` : ""}…`);
+  runOutput.show(true);
+
+  const result = await startFactoryRun(factoryRoot, runtimeRoot, { limit }, undefined, (chunk) =>
+    runOutput.append(chunk)
   );
+
+  if (!result.ok) {
+    vscode.window.showErrorMessage(result.message);
+  } else {
+    vscode.window.showInformationMessage(result.message);
+  }
 }

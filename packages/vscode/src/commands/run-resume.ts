@@ -12,7 +12,8 @@ import { startFactoryRun } from "../lib/run-adapter.js";
 export async function runResumeCommand(
   factoryRoot: string,
   runsDir: string,
-  runtimeRoot: string
+  runtimeRoot: string,
+  runOutput: vscode.OutputChannel
 ): Promise<void> {
   if (!factoryRoot) {
     vscode.window.showErrorMessage(
@@ -43,21 +44,21 @@ export async function runResumeCommand(
 
   if (!pickedRun) return;
 
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Resuming ${pickedRun.label}…`,
-      cancellable: false,
-    },
-    async () => {
-      const result = await startFactoryRun(factoryRoot, runtimeRoot, {
-        resumeId: pickedRun.label,
-      });
-      if (!result.ok) {
-        vscode.window.showErrorMessage(result.message);
-      } else {
-        vscode.window.showInformationMessage(result.message);
-      }
-    }
+  runOutput.clear();
+  runOutput.appendLine(`[Devory] Resuming run ${pickedRun.label}…`);
+  runOutput.show(true);
+
+  const result = await startFactoryRun(
+    factoryRoot,
+    runtimeRoot,
+    { resumeId: pickedRun.label },
+    undefined,
+    (chunk) => runOutput.append(chunk)
   );
+
+  if (!result.ok) {
+    vscode.window.showErrorMessage(result.message);
+  } else {
+    vscode.window.showInformationMessage(result.message);
+  }
 }

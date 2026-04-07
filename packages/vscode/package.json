@@ -2,7 +2,7 @@
   "name": "devory-vscode",
   "displayName": "Devory.AI",
   "description": "AI Dev Factory task and run management for VS Code",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "DevoryAI",
   "engines": {
     "vscode": "^1.85.0"
@@ -55,7 +55,8 @@
       },
       {
         "command": "devory.runStart",
-        "title": "Devory: Start Factory Run"
+        "title": "Devory: Start Factory Run",
+        "icon": "$(play)"
       },
       {
         "command": "devory.runResume",
@@ -70,6 +71,15 @@
         "title": "Devory: Inspect Artifacts"
       },
       {
+        "command": "devory.initWorkspace",
+        "title": "Devory: Initialize Workspace",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "devory.factoryDoctor",
+        "title": "Devory: Factory Doctor"
+      },
+      {
         "command": "devory.refresh",
         "title": "Devory: Refresh Task Explorer",
         "icon": "$(refresh)"
@@ -79,15 +89,29 @@
       "explorer": [
         {
           "id": "devoryTaskExplorer",
-          "name": "Devory.AI"
+          "name": "Devory: Tasks"
+        },
+        {
+          "id": "devoryFactoryExplorer",
+          "name": "Devory: Factory"
         }
       ]
     },
     "menus": {
       "view/title": [
         {
+          "command": "devory.initWorkspace",
+          "when": "view == devoryTaskExplorer && !devory.workspaceInitialized",
+          "group": "navigation@0"
+        },
+        {
           "command": "devory.refresh",
           "when": "view == devoryTaskExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "devory.factoryDoctor",
+          "when": "view == devoryFactoryExplorer",
           "group": "navigation"
         },
         {
@@ -104,6 +128,11 @@
           "command": "devory.runResume",
           "when": "view == devoryTaskExplorer",
           "group": "navigation@3"
+        },
+        {
+          "command": "devory.runStart",
+          "when": "view == devoryTaskExplorer",
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [
@@ -190,22 +219,72 @@
           "description": "Absolute path to your Devory workspace root. Leave blank to auto-detect from workspace."
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "devory.gettingStarted",
+        "title": "Get started with Devory",
+        "description": "Set up your AI dev factory in four steps.",
+        "steps": [
+          {
+            "id": "devory.step.setRoot",
+            "title": "Point Devory at your workspace",
+            "description": "Set ``devory.factoryRoot`` to the absolute path of your project root, or leave it blank to auto-detect from the open workspace.\n\n[Open Settings](command:workbench.action.openSettings?%5B%22devory.factoryRoot%22%5D)",
+            "media": {
+              "image": "icon.png",
+              "altText": "Devory"
+            }
+          },
+          {
+            "id": "devory.step.init",
+            "title": "Initialize your workspace",
+            "description": "Scaffold task directories, starter doctrine, and skill files with one command.\n\n[Initialize Workspace](command:devory.initWorkspace)",
+            "media": {
+              "image": "icon.png",
+              "altText": "Devory"
+            },
+            "completionEvents": [
+              "onContext:devory.workspaceInitialized"
+            ]
+          },
+          {
+            "id": "devory.step.createTask",
+            "title": "Create your first task",
+            "description": "Describe a unit of work for the AI agent. It lands in ``tasks/backlog/`` ready to be promoted.\n\n[Create Task](command:devory.taskCreate)",
+            "media": {
+              "image": "icon.png",
+              "altText": "Devory"
+            }
+          },
+          {
+            "id": "devory.step.runFactory",
+            "title": "Run the factory",
+            "description": "Start the AI agent loop. It picks up tasks from ``tasks/ready/`` and executes them.\n\n[Start Factory Run](command:devory.runStart)",
+            "media": {
+              "image": "icon.png",
+              "altText": "Devory"
+            }
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --format=cjs",
     "prepackage": "npm run build",
     "package": "vsce package --no-dependencies --allow-missing-repository",
-    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts src/test/task-create.test.ts src/test/task-move.test.ts src/test/task-control.test.ts src/test/control-command-flow.test.ts src/test/contributions.test.ts src/test/capabilities.test.ts src/test/run-adapter.test.ts"
+    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts src/test/task-create.test.ts src/test/task-move.test.ts src/test/task-control.test.ts src/test/control-command-flow.test.ts src/test/contributions.test.ts src/test/capabilities.test.ts src/test/run-adapter.test.ts src/test/find-devory-cli.test.ts src/test/seed-starter.test.ts"
   },
   "dependencies": {
     "@devory/cli": "*",
     "@devory/core": "*"
   },
   "devDependencies": {
+    "@types/sinon": "^21.0.1",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.20.0",
+    "sinon": "^21.0.3",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }

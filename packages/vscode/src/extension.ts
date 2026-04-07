@@ -3,14 +3,14 @@
  *
  * Devory VS Code Extension — entry point.
  *
- * Registers all commands and the task explorer tree view.
- * All data access goes through packages/vscode/src/lib/ (shared, testable)
- * or through @devory/cli invocation builders (factory-063+).
+ * Registers all commands and the task/factory explorer tree views.
+ * All data access goes through packages/vscode/src/lib/ (shared, testable).
  */
 
 import * as vscode from "vscode";
 import { getExtensionRuntimeRoot, getFactoryRoot, getFactoryPaths } from "./config.js";
 import { TaskTreeProvider } from "./providers/task-tree.js";
+import { FactoryTreeProvider } from "./providers/factory-tree.js";
 import {
   detectWorkspaceCapabilities,
   getUnsupportedCommandMessage,
@@ -26,11 +26,23 @@ import { runStartCommand } from "./commands/run-start.js";
 import { runResumeCommand } from "./commands/run-resume.js";
 import { runInspectCommand } from "./commands/run-inspect.js";
 import { artifactInspectCommand } from "./commands/artifact-inspect.js";
+import { factoryDoctorCommand } from "./commands/factory-doctor.js";
+import { initWorkspaceCommand } from "./commands/init-workspace.js";
+import {
+  shouldShowBootstrap,
+  markFirstRunComplete,
+  runBootstrapFlow,
+} from "./lib/bootstrap.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const factoryRoot = getFactoryRoot();
   const paths = getFactoryPaths(factoryRoot);
   const runtimeRoot = getExtensionRuntimeRoot(context.extensionPath);
+  const runOutput = vscode.window.createOutputChannel("Devory: Run");
+  const doctorOutput = vscode.window.createOutputChannel("Devory: Doctor");
+  const initOutput = vscode.window.createOutputChannel("Devory: Init");
+
+  context.subscriptions.push(runOutput, doctorOutput, initOutput);
 
   // ── Task Tree View ────────────────────────────────────────────────────────
   const treeProvider = new TaskTreeProvider(paths.tasksDir);
@@ -42,15 +54,26 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(treeView);
 
+  // ── Factory Tree View (Doctrine + Skills) ─────────────────────────────────
+  const factoryTreeProvider = new FactoryTreeProvider(factoryRoot);
+
+  const factoryTreeView = vscode.window.createTreeView("devoryFactoryExplorer", {
+    treeDataProvider: factoryTreeProvider,
+    showCollapseAll: false,
+  });
+
+  context.subscriptions.push(factoryTreeView);
+
   syncCapabilityContext(factoryRoot, runtimeRoot);
 
-  // Refresh tree when workspace config changes
+  // Refresh when workspace config changes
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("devory")) {
         const newRoot = getFactoryRoot();
         const newPaths = getFactoryPaths(newRoot);
         treeProvider.setTasksDir(newPaths.tasksDir);
+        factoryTreeProvider.setFactoryRoot(newRoot);
         syncCapabilityContext(newRoot, runtimeRoot);
       }
     })
@@ -61,6 +84,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("devory.refresh", () => {
       treeProvider.refresh();
+      factoryTreeProvider.refresh();
     })
   );
 
@@ -210,7 +234,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      runStartCommand(root, runtimeRoot);
+      runStartCommand(root, runtimeRoot, runOutput);
     })
   );
 
@@ -224,7 +248,7 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       const { runsDir } = getFactoryPaths(root);
-      runResumeCommand(root, runsDir, runtimeRoot);
+      runResumeCommand(root, runsDir, runtimeRoot, runOutput);
     })
   );
 
@@ -237,7 +261,8 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      runInspectCommand(getFactoryPaths(root).runsDir);
+      const { runsDir: rd, artifactsDir } = getFactoryPaths(root);
+      runInspectCommand(rd, artifactsDir);
     })
   );
 
@@ -253,10 +278,61 @@ export function activate(context: vscode.ExtensionContext): void {
       artifactInspectCommand(getFactoryPaths(root).artifactsDir);
     })
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.factoryDoctor", () => {
+      factoryDoctorCommand(getFactoryRoot(), doctorOutput);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.initWorkspace", () => {
+      const root = getFactoryRoot();
+      initWorkspaceCommand(
+        initOutput,
+        () => {
+          treeProvider.refresh();
+          syncCapabilityContext(root, runtimeRoot);
+          markFirstRunComplete(context);
+        },
+        () => {},
+        runtimeRoot
+      );
+    })
+  );
+
+  // ── First-run bootstrap ───────────────────────────────────────────────────
+  // Fires after a short delay so VS Code has finished rendering the workspace.
+  setTimeout(() => {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) return;
+
+    const cwd = workspaceFolder.uri.fsPath;
+    const caps = detectWorkspaceCapabilities(factoryRoot, runtimeRoot);
+
+    if (!shouldShowBootstrap(context, caps.hasTasksDir)) return;
+
+    void runBootstrapFlow(
+      context,
+      cwd,
+      initOutput,
+      () =>
+        initWorkspaceCommand(
+          initOutput,
+          () => {
+            treeProvider.refresh();
+            syncCapabilityContext(factoryRoot, runtimeRoot);
+            markFirstRunComplete(context);
+          },
+          () => {},
+          runtimeRoot
+        )
+    );
+  }, 2000);
 }
 
 export function deactivate(): void {
-  // No cleanup needed for MVP
+  // No cleanup needed
 }
 
 function syncCapabilityContext(factoryRoot: string, runtimeRoot: string): void {
@@ -270,5 +346,10 @@ function syncCapabilityContext(factoryRoot: string, runtimeRoot: string): void {
     "setContext",
     "devory.supportsRunExecution",
     capabilities.supportsRunExecution
+  );
+  void vscode.commands.executeCommand(
+    "setContext",
+    "devory.workspaceInitialized",
+    capabilities.hasTasksDir
   );
 }

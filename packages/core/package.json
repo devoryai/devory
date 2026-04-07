@@ -1,6 +1,6 @@
 {
   "name": "@devory/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared types, parsing utilities, and path configuration for AI Dev Factory",
   "main": "./dist/index.js",
   "types": "./src/index.ts",
