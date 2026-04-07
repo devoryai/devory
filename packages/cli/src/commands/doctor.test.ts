@@ -50,7 +50,7 @@ function makeWorkspace(opts: MakeWorkspaceOpts = {}): string {
   }
 
   const stages = opts.allStages !== false
-    ? (opts.someStages ?? ["backlog", "ready", "doing", "review", "done", "blocked"])
+    ? (opts.someStages ?? ["backlog", "ready", "doing", "review", "done", "blocked", "archived"])
     : (opts.someStages ?? []);
 
   for (const stage of stages) {
@@ -150,6 +150,7 @@ describe("doctor — checkTaskStages", () => {
     assert.ok(result.detail.includes("doing"));
     assert.ok(result.detail.includes("review"));
     assert.ok(result.detail.includes("blocked"));
+    assert.ok(result.detail.includes("archived"));
     fs.rmSync(root, { recursive: true, force: true });
   });
 
