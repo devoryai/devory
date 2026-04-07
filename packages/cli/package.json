@@ -21,6 +21,9 @@
     "build:lib": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=node --format=cjs",
     "prepublishOnly": "npm run build"
   },
+  "dependencies": {
+    "@devory/github": "0.3.0"
+  },
   "devDependencies": {
     "@devory/core": "*",
     "esbuild": "^0.20.0",
