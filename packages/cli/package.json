@@ -1,6 +1,6 @@
 {
   "name": "@devory/cli",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Devory CLI \u2014 formal command interface for Devory",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@devory/github": "0.3.0"
+    "@devory/github": "0.3.1"
   },
   "devDependencies": {
     "@devory/core": "*",

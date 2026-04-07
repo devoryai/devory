@@ -1,6 +1,6 @@
 {
   "name": "@devory/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Shared types, parsing utilities, and path configuration for AI Dev Factory",
   "repository": {
     "type": "git",
