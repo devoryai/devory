@@ -177,28 +177,32 @@ export function buildTaskSkeleton(opts: {
   id: string;
   title: string;
   project: string;
-  repo?: string;
-  branch?: string;
   type?: string;
   priority?: string;
+  /** When provided, written to frontmatter. Omitted when absent (deferred to promotion time). */
   agent?: string;
   lane?: string;
   repo_area?: string;
+  /** Optional one-sentence goal to pre-populate the Goal section. */
+  goal?: string;
+  // Kept for backwards compatibility but no longer written to the minimal template.
+  repo?: string;
+  branch?: string;
 }): string {
   const {
     id,
     title,
     project,
-    repo = ".",
-    branch = `task/${id}`,
     type = "feature",
     priority = "medium",
-    agent = "fullstack-builder",
+    agent,
     lane,
     repo_area,
+    goal = "",
   } = opts;
 
   const optionalLines: string[] = [];
+  if (agent) optionalLines.push(`agent: ${agent}`);
   if (lane) optionalLines.push(`lane: ${lane}`);
   if (repo_area) optionalLines.push(`repo_area: ${repo_area}`);
 
@@ -207,45 +211,54 @@ export function buildTaskSkeleton(opts: {
     `id: ${id}`,
     `title: ${title}`,
     `project: ${project}`,
-    `repo: ${repo}`,
-    `branch: ${branch}`,
+    `status: backlog`,
     `type: ${type}`,
     `priority: ${priority}`,
-    `status: backlog`,
-    `agent: ${agent}`,
     ...optionalLines,
-    `depends_on: []`,
-    `files_likely_affected: []`,
-    `verification:`,
-    `  - npm test`,
     "---",
     "",
     "## Goal",
     "",
-    "Describe the business outcome in plain English. What problem does this solve and why does it matter? One to three sentences.",
+    goal || "",
     "",
-    "## Context",
+    "## Notes",
     "",
-    "Relevant background, constraints, and assumptions the agent needs to know.",
-    "",
-    "## Acceptance Criteria",
-    "",
-    "- Criterion 1 — specific, verifiable outcome",
-    "",
-    "## Expected Artifacts",
-    "",
-    "- List files that will be created or modified",
-    "",
-    "## Failure Conditions",
-    "",
-    "- What would cause this task to be rejected?",
-    "",
-    "## Reviewer Checklist",
-    "",
-    "- [ ] All acceptance criteria satisfied",
-    "- [ ] Build and test output clean",
     "",
   ].join("\n");
+}
+
+/**
+ * Inject `agent: <value>` into the YAML frontmatter block of a task file's
+ * raw content.  Operates only within the opening `---` … `---` block so body
+ * text is never touched.
+ *
+ * - If `agent:` is already present the content is returned unchanged.
+ * - The line is inserted after `priority:` when that field exists, otherwise
+ *   just before the closing `---`.
+ */
+export function insertAgentIntoFrontmatter(content: string, agent: string): string {
+  const fmMatch = content.match(/^(---\n[\s\S]*?\n---\n)/);
+  if (!fmMatch) return content;
+
+  const fm = fmMatch[1];
+
+  // Already has an agent — leave unchanged.
+  if (/^agent:\s*/m.test(fm)) return content;
+
+  const agentLine = `agent: ${agent}`;
+
+  // Prefer to insert after the `priority:` line for consistent field ordering.
+  const priorityMatch = fm.match(/^(priority:[^\n]*\n)/m);
+  let updatedFm: string;
+  if (priorityMatch?.index !== undefined) {
+    const insertAt = (priorityMatch.index ?? 0) + priorityMatch[1].length;
+    updatedFm = fm.slice(0, insertAt) + agentLine + "\n" + fm.slice(insertAt);
+  } else {
+    // Fall back: insert before closing `---`.
+    updatedFm = fm.replace(/\n---\n$/, `\n${agentLine}\n---\n`);
+  }
+
+  return content.replace(fm, updatedFm);
 }
 
 /** Return error messages for any missing required frontmatter fields. */
@@ -268,6 +281,8 @@ export interface CreateTaskArgs {
   agent?: string;
   lane?: string;
   repoArea?: string;
+  /** Optional one-sentence goal to pre-populate the Goal section. */
+  goal?: string;
 }
 
 export type CreateTaskResult =
@@ -289,6 +304,7 @@ export function createTask(
   const content = buildTaskSkeleton({
     ...args,
     repo_area: args.repoArea,
+    goal: args.goal,
   });
   const filename = buildTaskFilename(args.id, args.title);
   const targetDir = path.join(factoryRoot, "tasks", "backlog");

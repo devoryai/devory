@@ -2,7 +2,7 @@
   "name": "devory-vscode",
   "displayName": "Devory.AI",
   "description": "Repo-aware task, run, doctrine, and review workflow for Devory in VS Code",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "publisher": "DevoryAI",
   "engines": {
     "vscode": "^1.85.0"
@@ -23,7 +23,8 @@
       },
       {
         "command": "devory.taskCreate",
-        "title": "Devory: Create Task"
+        "title": "Devory: Create Task",
+        "icon": "$(add)"
       },
       {
         "command": "devory.taskMove",
@@ -31,11 +32,34 @@
       },
       {
         "command": "devory.taskPromote",
-        "title": "Devory: Promote Task"
+        "title": "Devory: Promote Task",
+        "icon": "$(arrow-up)"
       },
       {
         "command": "devory.reviewQueue",
-        "title": "Devory: Open Review Queue"
+        "title": "Devory: Open Review Queue",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "devory.enrichTask",
+        "title": "Devory: Enrich Task",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "devory.addAcceptanceCriteria",
+        "title": "Devory: Add Acceptance Criteria"
+      },
+      {
+        "command": "devory.addVerification",
+        "title": "Devory: Add Verification Steps"
+      },
+      {
+        "command": "devory.addDependencies",
+        "title": "Devory: Add Dependencies"
+      },
+      {
+        "command": "devory.addFilesAffected",
+        "title": "Devory: Add Files Likely Affected"
       },
       {
         "command": "devory.taskApprove",
@@ -148,23 +172,28 @@
         },
         {
           "command": "devory.taskCreate",
-          "when": "view == devoryTaskExplorer",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized",
           "group": "navigation@1"
         },
         {
-          "command": "devory.reviewQueue",
-          "when": "view == devoryTaskExplorer",
+          "command": "devory.taskPromote",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized",
           "group": "navigation@2"
         },
         {
-          "command": "devory.runResume",
-          "when": "view == devoryTaskExplorer",
+          "command": "devory.reviewQueue",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized",
           "group": "navigation@3"
         },
         {
           "command": "devory.runStart",
-          "when": "view == devoryTaskExplorer",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized",
           "group": "navigation@4"
+        },
+        {
+          "command": "devory.runResume",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized",
+          "group": "navigation@5"
         }
       ],
       "view/item/context": [
@@ -217,6 +246,11 @@
           "command": "devory.taskArchive",
           "when": "view == devoryTaskExplorer && viewItem =~ /^task\\.(backlog|ready|doing|review|blocked)$/",
           "group": "navigation@4"
+        },
+        {
+          "command": "devory.enrichTask",
+          "when": "view == devoryTaskExplorer && viewItem =~ /^task\\.(backlog|ready)$/",
+          "group": "navigation@5"
         },
         {
           "command": "devory.doctrineCreate",
@@ -274,6 +308,11 @@
           "command": "devory.reviewQueue",
           "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/review\\//",
           "group": "navigation@16"
+        },
+        {
+          "command": "devory.enrichTask",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/(backlog|ready)\\//",
+          "group": "navigation@17"
         }
       ]
     },

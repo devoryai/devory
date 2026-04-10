@@ -33,6 +33,7 @@ import { skillCreateCommand } from "./commands/skill-create.js";
 import { doctrineArchiveCommand } from "./commands/doctrine-archive.js";
 import { skillArchiveCommand } from "./commands/skill-archive.js";
 import { taskArchiveCommand } from "./commands/task-archive.js";
+import { taskEnrichCommand, addSectionCommand } from "./commands/task-enrich.js";
 import {
   shouldShowBootstrap,
   markFirstRunComplete,
@@ -273,6 +274,36 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       skillArchiveCommand(getFactoryRoot(), target.skillMdPath, () => factoryTreeProvider.refresh());
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.enrichTask", () => {
+      void taskEnrichCommand();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.addAcceptanceCriteria", () => {
+      void addSectionCommand("acceptanceCriteria");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.addVerification", () => {
+      void addSectionCommand("verification");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.addDependencies", () => {
+      void addSectionCommand("dependsOn");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.addFilesAffected", () => {
+      void addSectionCommand("filesAffected");
     })
   );
 

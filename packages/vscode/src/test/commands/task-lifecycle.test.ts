@@ -19,7 +19,8 @@ describe("VS Code task lifecycle commands", () => {
   });
 
   test("taskCreateCommand passes trimmed input to the create workflow", async () => {
-    state.inputBoxValues.push("  factory-406  ", "Add smoke tests", "devory-public");
+    // 4th value is the optional goal — empty string means the user pressed Enter to skip.
+    state.inputBoxValues.push("  factory-406  ", "Add smoke tests", "devory-public", "");
     state.taskCreateResult = { ok: true, openedInEditor: false, filePath: "/workspace/tasks/backlog/factory-406.md" };
 
     const { taskCreateCommand } = await import("../../commands/task-create.ts");
@@ -29,8 +30,35 @@ describe("VS Code task lifecycle commands", () => {
       id: "factory-406",
       title: "Add smoke tests",
       project: "devory-public",
+      goal: undefined,
     });
     assert.match(state.infoMessages[0] ?? "", /task factory-406 created/i);
+  });
+
+  test("taskCreateCommand passes goal when provided", async () => {
+    state.inputBoxValues.push("factory-407", "Add smoke tests", "devory-public", "Make CI faster");
+    state.taskCreateResult = { ok: true, openedInEditor: false, filePath: "/workspace/tasks/backlog/factory-407.md" };
+
+    const { taskCreateCommand } = await import("../../commands/task-create.ts");
+    await taskCreateCommand("/workspace");
+
+    assert.deepEqual(state.createCalls[0], {
+      id: "factory-407",
+      title: "Add smoke tests",
+      project: "devory-public",
+      goal: "Make CI faster",
+    });
+  });
+
+  test("taskCreateCommand cancels when user dismisses goal prompt", async () => {
+    // undefined = user pressed Escape on goal step
+    state.inputBoxValues.push("factory-408", "Add smoke tests", "devory-public", undefined);
+    state.taskCreateResult = { ok: true, openedInEditor: false, filePath: "/workspace/tasks/backlog/factory-408.md" };
+
+    const { taskCreateCommand } = await import("../../commands/task-create.ts");
+    await taskCreateCommand("/workspace");
+
+    assert.equal(state.createCalls.length, 0);
   });
 
   test("taskMoveCommand routes the selected task to the move workflow", async () => {

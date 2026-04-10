@@ -21,6 +21,7 @@ export {
   checkTransition,
   reviewActionToStage,
   rewriteStatus,
+  insertAgentIntoFrontmatter,
   REVIEW_ACTIONS,
   validateReviewAction,
   validateRequiredFields,

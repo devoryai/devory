@@ -17,7 +17,7 @@ export async function taskCreateCommand(factoryRoot: string): Promise<void> {
   }
 
   const id = await vscode.window.showInputBox({
-    title: "Devory: Create Task (1/3)",
+    title: "Devory: Create Task (1/4)",
     prompt: "Task ID — used as the filename and referenced in depends_on chains",
     placeHolder: "my-project-001",
     validateInput: (v) =>
@@ -28,7 +28,7 @@ export async function taskCreateCommand(factoryRoot: string): Promise<void> {
   if (!id) return;
 
   const title = await vscode.window.showInputBox({
-    title: "Devory: Create Task (2/3)",
+    title: "Devory: Create Task (2/4)",
     prompt: "Task title — one sentence describing the outcome, not the implementation",
     placeHolder: "Add user authentication to the API",
     validateInput: (v) => (v.trim() ? null : "Title is required"),
@@ -36,12 +36,20 @@ export async function taskCreateCommand(factoryRoot: string): Promise<void> {
   if (!title) return;
 
   const project = await vscode.window.showInputBox({
-    title: "Devory: Create Task (3/3)",
+    title: "Devory: Create Task (3/4)",
     prompt: "Project name — the codebase or product this task belongs to",
     placeHolder: "my-project",
     validateInput: (v) => (v.trim() ? null : "Project is required"),
   });
   if (!project) return;
+
+  const goal = await vscode.window.showInputBox({
+    title: "Devory: Create Task (4/4)",
+    prompt: "Goal — one sentence describing what this task should accomplish (optional, press Enter to skip)",
+    placeHolder: "Make task creation less painful inside the IDE.",
+  });
+  // goal === undefined means the user pressed Escape (cancel); empty string means they skipped
+  if (goal === undefined) return;
 
   const trimmedId = id.trim();
 
@@ -49,7 +57,7 @@ export async function taskCreateCommand(factoryRoot: string): Promise<void> {
     { location: vscode.ProgressLocation.Notification, title: `Creating task ${trimmedId}…` },
     async () => {
       const result = await runTaskCreateWorkflow(
-        { id: trimmedId, title, project },
+        { id: trimmedId, title, project, goal: goal.trim() || undefined },
         {
           factoryRoot,
           openTextDocument: (filePath) => vscode.workspace.openTextDocument(filePath),

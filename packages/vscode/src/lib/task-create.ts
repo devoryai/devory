@@ -34,7 +34,7 @@ export type TaskCreateWorkflowResult =
     };
 
 export async function runTaskCreateWorkflow(
-  args: Pick<CreateTaskArgs, "id" | "title" | "project">,
+  args: Pick<CreateTaskArgs, "id" | "title" | "project" | "goal">,
   deps: TaskCreateWorkflowDeps
 ): Promise<TaskCreateWorkflowResult> {
   const createTaskImpl = deps.createTaskImpl ?? createTask;
