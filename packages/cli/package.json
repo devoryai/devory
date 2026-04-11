@@ -1,7 +1,7 @@
 {
   "name": "@devory/cli",
-  "version": "0.4.0",
-  "description": "Devory CLI \u2014 formal command interface for Devory",
+  "version": "0.4.2",
+  "description": "Devory CLI — formal command interface for Devory",
   "repository": {
     "type": "git",
     "url": "https://github.com/devoryai/devory"

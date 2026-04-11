@@ -12,6 +12,7 @@ import * as vscode from "vscode";
 import { getExtensionRuntimeRoot, getFactoryRoot, getFactoryPaths } from "./config.js";
 import { TaskTreeProvider } from "./providers/task-tree.js";
 import { FactoryTreeProvider } from "./providers/factory-tree.js";
+import { TaskAssistantProvider } from "./providers/task-assistant.js";
 import {
   detectWorkspaceCapabilities,
   getUnsupportedCommandMessage,
@@ -45,6 +46,8 @@ import {
   formatGovernanceStatusSummary,
 } from "./lib/governance-status.js";
 import { resolveTasksDir } from "./lib/task-paths.js";
+import { resolveActiveEditorTask } from "./lib/task-target.js";
+import { TaskItem } from "./providers/task-tree.js";
 import {
   shouldShowBootstrap,
   markFirstRunComplete,
@@ -98,6 +101,48 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(factoryTreeView);
 
+  // ── Task Assistant Webview View ───────────────────────────────────────────
+  const taskAssistantProvider = new TaskAssistantProvider();
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      TaskAssistantProvider.viewId,
+      taskAssistantProvider,
+      { webviewOptions: { retainContextWhenHidden: true } }
+    )
+  );
+
+  // Update assistant when the active editor switches to/from a task file.
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(() => {
+      const tasksDir = resolveTasksDir(getFactoryRoot());
+      const task = resolveActiveEditorTask(tasksDir);
+      taskAssistantProvider.setTask(task);
+    })
+  );
+
+  // Update assistant when a task is selected in the tree.
+  context.subscriptions.push(
+    treeView.onDidChangeSelection((e) => {
+      const selected = e.selection[0];
+      if (selected instanceof TaskItem) {
+        taskAssistantProvider.setTask(selected.task);
+      } else if (!selected) {
+        const tasksDir = resolveTasksDir(getFactoryRoot());
+        taskAssistantProvider.setTask(resolveActiveEditorTask(tasksDir));
+      }
+    })
+  );
+
+  // Register the focus command.
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.focusTaskAssistant", () => {
+      void vscode.commands.executeCommand(
+        "devoryTaskAssistant.focus"
+      );
+    })
+  );
+
   const governanceStatusBar = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left,
     98,
@@ -125,6 +170,7 @@ export function activate(context: vscode.ExtensionContext): void {
         factoryTreeProvider.setFactoryRoot(newRoot);
         syncCapabilityContext(newRoot, runtimeRoot);
         refreshGovernanceStatus();
+        taskAssistantProvider.setTask(resolveActiveEditorTask(resolveTasksDir(newRoot)));
       }
     })
   );

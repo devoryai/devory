@@ -2,7 +2,7 @@
   "name": "devory-vscode",
   "displayName": "Devory.AI",
   "description": "Repo-aware task, run, doctrine, and review workflow for Devory in VS Code",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "DevoryAI",
   "engines": {
     "vscode": "^1.85.0"
@@ -160,6 +160,11 @@
       {
         "command": "devory.sweepWorkshop",
         "title": "Devory: Sweep the Workshop"
+      },
+      {
+        "command": "devory.focusTaskAssistant",
+        "title": "Devory: Open Task Assistant",
+        "icon": "$(comment-discussion)"
       }
     ],
     "views": {
@@ -171,6 +176,11 @@
         {
           "id": "devoryFactoryExplorer",
           "name": "Devory: Factory"
+        },
+        {
+          "id": "devoryTaskAssistant",
+          "name": "Devory: Task Assistant",
+          "type": "webview"
         }
       ]
     },
@@ -185,6 +195,11 @@
           "command": "devory.refresh",
           "when": "view == devoryTaskExplorer",
           "group": "navigation"
+        },
+        {
+          "command": "devory.focusTaskAssistant",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized",
+          "group": "navigation@0.5"
         },
         {
           "command": "devory.factoryDoctor",
@@ -354,6 +369,11 @@
           "command": "devory.enrichTask",
           "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\/(backlog|ready)\\//",
           "group": "navigation@17"
+        },
+        {
+          "command": "devory.focusTaskAssistant",
+          "when": "resourceExtname == .md && resourcePath =~ /\\/tasks\\//",
+          "group": "navigation@18"
         }
       ]
     },

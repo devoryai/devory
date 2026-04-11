@@ -1,7 +1,7 @@
 {
   "name": "@devory/github",
-  "version": "0.3.1",
-  "description": "Devory GitHub integration \u2014 branch naming, PR helpers, and GitHub Actions support",
+  "version": "0.4.2",
+  "description": "Devory GitHub integration — branch naming, PR helpers, and GitHub Actions support",
   "repository": {
     "type": "git",
     "url": "https://github.com/devoryai/devory"
