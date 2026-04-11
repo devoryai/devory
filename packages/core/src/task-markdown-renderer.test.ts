@@ -2,7 +2,6 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseFrontmatter } from "./parse.ts";
 import {
   buildMinimalTaskDraftFixture,
@@ -19,10 +18,7 @@ import {
   TASK_MARKDOWN_SECTION_ORDER,
 } from "./task-markdown-renderer.ts";
 
-const MODULE_FILE =
-  typeof __filename === "string" ? __filename : fileURLToPath(import.meta.url);
-const MODULE_DIR =
-  typeof __dirname === "string" ? __dirname : path.dirname(MODULE_FILE);
+const MODULE_DIR = __dirname;
 const REPO_ROOT = path.resolve(MODULE_DIR, "..", "..", "..");
 
 function readTemplate(name: string): string {

@@ -1,11 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
-
-const MODULE_DIR =
-  typeof __dirname === "string"
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url));
+import { resolveCoreDefaultsDir } from "./defaults-path.ts";
 
 export const EXECUTION_POLICY_VERSION = "execution-policy-v1" as const;
 export const EXECUTION_POLICY_FILENAME = "execution-policy.json" as const;
@@ -89,7 +84,10 @@ export interface ExecutionPolicyResolution {
   workspace_config_path: string | null;
 }
 
-const DEFAULTS_PATH = path.join(MODULE_DIR, "defaults", EXECUTION_POLICY_FILENAME);
+const DEFAULTS_PATH = path.join(
+  resolveCoreDefaultsDir(__dirname),
+  EXECUTION_POLICY_FILENAME
+);
 const VALID_MANAGERS = ["npm", "pnpm", "yarn", "bun"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

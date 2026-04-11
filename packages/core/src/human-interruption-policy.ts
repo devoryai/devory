@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
 
 import type { TaskMeta } from "./parse.ts";
 import type {
@@ -8,11 +7,7 @@ import type {
   HumanQuestionFallbackBehavior,
   HumanQuestionInputMode,
 } from "./human-question.ts";
-
-const MODULE_DIR =
-  typeof __dirname === "string"
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url));
+import { resolveCoreDefaultsDir } from "./defaults-path.ts";
 
 export const HUMAN_INTERRUPTION_POLICY_VERSION = "human-interruption-policy-v1" as const;
 export const HUMAN_INTERRUPTION_POLICY_FILENAME = "human-interruption-policy.json" as const;
@@ -65,7 +60,10 @@ export interface HumanInterruptionPolicyOverrides {
   interruption_thresholds?: Partial<Record<HumanPolicyThresholdKey, HumanInterruptionLevel>>;
 }
 
-const DEFAULTS_PATH = path.join(MODULE_DIR, "defaults", HUMAN_INTERRUPTION_POLICY_FILENAME);
+const DEFAULTS_PATH = path.join(
+  resolveCoreDefaultsDir(__dirname),
+  HUMAN_INTERRUPTION_POLICY_FILENAME
+);
 const VALID_INTERRUPTION_LEVELS = ["level_1", "level_2", "level_3"] as const;
 const VALID_INPUT_MODES = ["local-api", "cli", "digest"] as const;
 const VALID_FALLBACK_BEHAVIORS = [

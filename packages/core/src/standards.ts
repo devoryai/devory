@@ -14,13 +14,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
 import { load as parseYaml } from "js-yaml";
-
-const MODULE_DIR =
-  typeof __dirname === "string"
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url));
+import { resolveCoreDefaultsDir } from "./defaults-path.ts";
 
 // ---------------------------------------------------------------------------
 // Schema types
@@ -139,7 +134,7 @@ export function loadStandards(factoryRoot: string): LoadedStandards {
 // ---------------------------------------------------------------------------
 
 const DEVORY_DEFAULTS_PREFIX = "@devory/defaults/";
-const DEFAULTS_DIR = path.join(MODULE_DIR, "defaults");
+const DEFAULTS_DIR = resolveCoreDefaultsDir(__dirname);
 
 const KNOWN_BASELINES: Record<string, string> = {
   generic: "generic.yml",

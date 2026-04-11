@@ -1,11 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { fileURLToPath } from "url";
-
-const MODULE_DIR =
-  typeof __dirname === "string"
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url));
+import { resolveCoreDefaultsDir } from "./defaults-path.ts";
 
 export const UNATTENDED_STALL_POLICY_VERSION =
   "unattended-stall-policy-v1" as const;
@@ -38,8 +33,7 @@ export interface UnattendedStallPolicyResolution {
 }
 
 const DEFAULTS_PATH = path.join(
-  MODULE_DIR,
-  "defaults",
+  resolveCoreDefaultsDir(__dirname),
   UNATTENDED_STALL_POLICY_FILENAME
 );
 
