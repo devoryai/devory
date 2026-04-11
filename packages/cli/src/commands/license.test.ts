@@ -180,4 +180,60 @@ describe("license command — run", () => {
       fs.chmodSync(devoryDir, 0o700);
     }
   });
+
+  test("clear when no license file exists reports gracefully and returns 0", async () => {
+    // Ensure no license file is present
+    const licensePath = path.join(workspace, ".devory", "license");
+    assert.equal(fs.existsSync(licensePath), false);
+
+    const capture = withCapturedConsole();
+    restoreConsole = capture.restore;
+
+    const exitCode = await run({ subcommand: "clear", root: workspace });
+
+    assert.equal(exitCode, 0);
+    assert.ok(capture.logs.some((line) => line.includes("No license file found")));
+  });
+
+  test("status shows DEVORY_LICENSE_KEY as key source when set via env var", async () => {
+    const keys = generateTestKeyPair();
+    writeJwk(workspace, keys.publicJwk);
+    process.env.DEVORY_LICENSE_KEY = validToken(keys.privateKey);
+
+    const capture = withCapturedConsole();
+    restoreConsole = capture.restore;
+
+    const exitCode = await run({ subcommand: "status", root: workspace });
+
+    assert.equal(exitCode, 0);
+    const output = capture.logs.join("\n");
+    assert.ok(output.includes("Tier: Pro"));
+    assert.ok(output.includes("Key source: DEVORY_LICENSE_KEY"));
+  });
+
+  test("run resolves factory root from DEVORY_FACTORY_ROOT when --root is omitted", async () => {
+    const keys = generateTestKeyPair();
+    writeJwk(workspace, keys.publicJwk);
+    fs.writeFileSync(path.join(workspace, ".devory", "license"), `${validToken(keys.privateKey)}\n`);
+
+    // Point resolveFactoryRoot() at our temp workspace via the env var it checks first
+    const prev = process.env.DEVORY_FACTORY_ROOT;
+    process.env.DEVORY_FACTORY_ROOT = workspace;
+
+    const capture = withCapturedConsole();
+    restoreConsole = capture.restore;
+
+    try {
+      // No `root` property — run() must call resolveFactoryRoot() internally
+      const exitCode = await run({ subcommand: "status" } as any);
+
+      assert.equal(exitCode, 0);
+      const output = capture.logs.join("\n");
+      assert.ok(output.includes(`Factory root: ${workspace}`));
+      assert.ok(output.includes("Tier: Pro"));
+    } finally {
+      if (prev === undefined) delete process.env.DEVORY_FACTORY_ROOT;
+      else process.env.DEVORY_FACTORY_ROOT = prev;
+    }
+  });
 });

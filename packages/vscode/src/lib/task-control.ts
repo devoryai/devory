@@ -134,11 +134,17 @@ export function runTaskReviewWorkflow(
   deps.onChanged?.();
 
   const message =
-    args.action === "approve"
-      ? `Devory: approved ${args.label}.`
-      : args.action === "send-back"
-        ? `Devory: sent ${args.label} back to doing.`
-        : `Devory: blocked ${args.label}.`;
+    result.executionMode === "governance-queued"
+      ? args.action === "approve"
+        ? `Devory: queued approval for ${args.label}.`
+        : args.action === "send-back"
+          ? `Devory: queued send-back for ${args.label}.`
+          : `Devory: queued block for ${args.label}.`
+      : args.action === "approve"
+        ? `Devory: approved ${args.label}.`
+        : args.action === "send-back"
+          ? `Devory: sent ${args.label} back to doing.`
+          : `Devory: blocked ${args.label}.`;
 
   return { ok: true, message };
 }

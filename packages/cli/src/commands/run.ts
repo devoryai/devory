@@ -1,11 +1,15 @@
 /**
  * packages/cli/src/commands/run.ts
  *
- * `devory run` — run the factory orchestrator.
+ * `devory run` — run a single factory orchestrator pass.
  * Delegates to `scripts/factory-run.ts` via spawn.
  */
 
+import * as fs from "fs";
+import * as path from "path";
 import { spawnSync } from "child_process";
+import { loadFeatureFlags } from "@devory/core";
+import { resolveFactoryRoot } from "../lib/factory-root.ts";
 import { buildTsxInvocation } from "../lib/tsx.ts";
 
 export const NAME = "run";
@@ -62,7 +66,31 @@ export function buildInvocation(args: RunArgs): string[] {
   return buildTsxInvocation("scripts/factory-run.ts", argv);
 }
 
+export function buildGovernanceRunNotice(factoryRoot: string): string | null {
+  const { flags } = loadFeatureFlags(factoryRoot);
+  if (!flags.governance_repo_enabled) {
+    return null;
+  }
+
+  const bindingPath = path.join(factoryRoot, ".devory", "governance.json");
+  if (!fs.existsSync(bindingPath)) {
+    return null;
+  }
+
+  return [
+    "[devory run] Governance mode is active.",
+    "This command runs one orchestrator pass and does not poll governance commands.",
+    "Use `devory worker` for pause/resume/approve/override command polling.",
+  ].join(" ");
+}
+
 export function run(args: RunArgs): number {
+  const { root: factoryRoot } = resolveFactoryRoot();
+  const governanceNotice = buildGovernanceRunNotice(factoryRoot);
+  if (governanceNotice) {
+    console.log(governanceNotice);
+  }
+
   const [cmd, ...rest] = buildInvocation(args);
   const result = spawnSync(cmd, rest, { stdio: "inherit" });
   return result.status ?? 1;

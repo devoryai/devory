@@ -11,6 +11,7 @@
 import * as vscode from "vscode";
 import * as cp from "child_process";
 import { findDevoryCli } from "./find-devory-cli.js";
+import { buildCliSpawnEnv } from "./cli-spawn-env.js";
 
 // ── Persistence keys ────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ export async function checkAndLogCliReadiness(
 
   if (cliPath) {
     output.appendLine(`[Devory]   Found CLI at : ${cliPath}`);
-    cliVersion = await probeCliVersion(cliPath);
+    cliVersion = await probeCliVersion(cwd, cliPath);
     if (cliVersion) {
       output.appendLine(`[Devory]   CLI verified : version ${cliVersion}`);
     } else {
@@ -114,7 +115,7 @@ export async function checkAndLogCliReadiness(
  * Runs `devory --version` and returns the first line of output, or null on failure.
  * Times out after 5 seconds.
  */
-function probeCliVersion(cliPath: string): Promise<string | null> {
+function probeCliVersion(cwd: string, cliPath: string): Promise<string | null> {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (v: string | null): void => {
@@ -126,7 +127,7 @@ function probeCliVersion(cliPath: string): Promise<string | null> {
 
     const child = cp.spawn(cliPath, ["--version"], {
       shell: false,
-      env: { ...process.env },
+      env: buildCliSpawnEnv(cwd, cliPath),
     });
 
     let buf = "";

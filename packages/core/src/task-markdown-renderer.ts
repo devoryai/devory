@@ -16,6 +16,9 @@ export const TASK_MARKDOWN_FRONTMATTER_ORDER = [
   "priority",
   "status",
   "agent",
+  "external_source",
+  "external_key",
+  "external_url",
   "lane",
   "repo_area",
   "bundle_id",
@@ -102,6 +105,9 @@ export function renderTaskDraftTarget(
     `agent: ${draft.agent}`,
   ];
 
+  pushOptionalFrontmatter(lines, "external_source", draft.external_source);
+  pushOptionalFrontmatter(lines, "external_key", draft.external_key);
+  pushOptionalFrontmatter(lines, "external_url", draft.external_url);
   pushOptionalFrontmatter(lines, "lane", draft.lane);
   pushOptionalFrontmatter(lines, "repo_area", draft.repo_area);
   pushOptionalFrontmatter(lines, "bundle_id", draft.bundle_id);

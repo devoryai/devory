@@ -20,7 +20,7 @@
 
 import { spawnSync } from "child_process";
 import type { TaskMeta } from "@devory/core";
-import { buildPrTitle, buildPrBody } from "./pr-helpers.js";
+import { buildPrTitle, buildPrBody } from "./pr-helpers.ts";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -13,8 +13,8 @@ export {
   buildBranchName,
   branchPrefix,
   slugify,
-} from "./lib/branch-helpers.js";
-export type { BranchResult } from "./lib/branch-helpers.js";
+} from "./lib/branch-helpers.ts";
+export type { BranchResult } from "./lib/branch-helpers.ts";
 
 // ── PR helpers ──────────────────────────────────────────────────────────────
 export {
@@ -23,8 +23,8 @@ export {
   buildPrMetadata,
   commitType,
   taskScope,
-} from "./lib/pr-helpers.js";
-export type { PrMetadata } from "./lib/pr-helpers.js";
+} from "./lib/pr-helpers.ts";
+export type { PrMetadata } from "./lib/pr-helpers.ts";
 
 // ── GitHub Actions helpers ──────────────────────────────────────────────────
 export {
@@ -35,7 +35,7 @@ export {
   isGitHubActions,
   getRunId,
   getRepoSlug,
-} from "./lib/action-helpers.js";
+} from "./lib/action-helpers.ts";
 
 // ── PR creation (gated) ──────────────────────────────────────────────────────
 export {
@@ -43,5 +43,12 @@ export {
   prCreateBlockedReason,
   buildGhCreateArgs,
   createPr,
-} from "./lib/pr-create.js";
-export type { PrCreateOptions, PrCreateResult } from "./lib/pr-create.js";
+} from "./lib/pr-create.ts";
+export type { PrCreateOptions, PrCreateResult } from "./lib/pr-create.ts";
+
+// ── External intake adapters ────────────────────────────────────────────────
+export { fetchGitHubIssue, isGitHubIssueUrl } from "./lib/issue-adapter.ts";
+export {
+  extractAcceptanceCriteria,
+  filterPlanningComments,
+} from "./lib/issue-content-extractor.ts";

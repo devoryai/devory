@@ -8,11 +8,11 @@ import * as path from "path";
 
 import {
   clearLicenseToken,
-  getLicenseFilePath,
   getLicenseStatus,
+  getLicenseFilePath,
   writeLicenseToken,
   type LicenseStatus,
-} from "../../../core/src/index.ts";
+} from "../../../core/src/license.ts";
 import { resolveFactoryRoot } from "../lib/factory-root.ts";
 
 export const NAME = "license";

@@ -19,7 +19,10 @@ import { spawnSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { parseArgs, buildInvocation } from "./run.js";
+import * as fs from "node:fs";
+import * as os from "node:os";
+
+import { parseArgs, buildInvocation, buildGovernanceRunNotice } from "./run.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const FACTORY_ROOT = path.resolve(path.dirname(__filename), "..", "..", "..", "..", "..");
@@ -102,6 +105,50 @@ describe("run command — buildInvocation", () => {
     assert.ok(!inv.includes("--resume"));
     assert.ok(!inv.includes("--dry-run"));
     assert.ok(!inv.includes("--validate"));
+  });
+});
+
+describe("run command — governance notice", () => {
+  test("returns a governance notice when governance mode is active and bound", () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devory-run-governance-"));
+    fs.mkdirSync(path.join(workspace, ".devory"), { recursive: true });
+    fs.writeFileSync(
+      path.join(workspace, ".devory", "feature-flags.json"),
+      '{"governance_repo_enabled":true}\n',
+      "utf-8"
+    );
+    fs.writeFileSync(
+      path.join(workspace, ".devory", "governance.json"),
+      '{"workspace_id":"test-workspace","governance_repo_path":"/tmp/gov"}\n',
+      "utf-8"
+    );
+
+    const notice = buildGovernanceRunNotice(workspace);
+    assert.match(notice ?? "", /does not poll governance commands/);
+    assert.match(notice ?? "", /Use `devory worker`/);
+
+    fs.rmSync(workspace, { recursive: true, force: true });
+  });
+
+  test("returns null when governance mode is disabled or unbound", () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devory-run-legacy-"));
+    fs.mkdirSync(path.join(workspace, ".devory"), { recursive: true });
+    fs.writeFileSync(
+      path.join(workspace, ".devory", "feature-flags.json"),
+      '{"governance_repo_enabled":false}\n',
+      "utf-8"
+    );
+
+    assert.equal(buildGovernanceRunNotice(workspace), null);
+
+    fs.writeFileSync(
+      path.join(workspace, ".devory", "feature-flags.json"),
+      '{"governance_repo_enabled":true}\n',
+      "utf-8"
+    );
+    assert.equal(buildGovernanceRunNotice(workspace), null);
+
+    fs.rmSync(workspace, { recursive: true, force: true });
   });
 });
 

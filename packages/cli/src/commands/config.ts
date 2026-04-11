@@ -11,8 +11,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { resolveFactoryRoot, type FactoryRootSource } from "../lib/factory-root.ts";
-import { loadStandards, STANDARDS_FILENAME } from "../../../core/src/index.ts";
-import { detectTier, type LicenseInfo } from "../../../core/src/index.ts";
+import { loadStandards, STANDARDS_FILENAME } from "../../../core/src/standards.ts";
+import { detectTier, type LicenseInfo } from "../../../core/src/license.ts";
 
 export const NAME = "config";
 export const USAGE = "devory config";
@@ -26,7 +26,7 @@ export interface ConfigReport {
   tasksDir: string;
   tasksDirFound: boolean;
   workspacesFound: string[];
-  standardsSource: "yaml" | "brain" | "none";
+  standardsSource: "yaml" | "doctrine" | "none";
   license: LicenseInfo;
 }
 
@@ -56,8 +56,8 @@ export async function buildConfigReport(factoryRoot: string, source?: FactoryRoo
     : [];
 
   const { source: standardsSource } = loadStandards(factoryRoot);
-  const brainDir = path.join(factoryRoot, "brain");
-  const hasBrain = fs.existsSync(brainDir);
+  const doctrineDir = path.join(factoryRoot, "doctrine");
+  const hasDoctrine = fs.existsSync(doctrineDir);
   const license = await detectTier(factoryRoot);
 
   return {
@@ -69,7 +69,7 @@ export async function buildConfigReport(factoryRoot: string, source?: FactoryRoo
     workspacesFound,
     standardsSource: standardsSource.type === "yaml"
       ? "yaml"
-      : hasBrain ? "brain" : "none",
+      : hasDoctrine ? "doctrine" : "none",
     license,
   };
 }
@@ -80,8 +80,8 @@ export function formatConfigReport(report: ConfigReport): string {
   const standardsLabel =
     report.standardsSource === "yaml"
       ? `${STANDARDS_FILENAME} (yaml)`
-      : report.standardsSource === "brain"
-      ? "brain/ (markdown)"
+      : report.standardsSource === "doctrine"
+      ? "doctrine/ (markdown)"
       : "none — run devory init";
 
   const { license } = report;

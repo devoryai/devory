@@ -2,9 +2,10 @@
  * packages/vscode/src/providers/factory-tree.ts
  *
  * VS Code TreeDataProvider for the Devory Factory sidebar view.
- * Shows two sections:
+ * Shows three sections:
  *   Doctrine — files from <factoryRoot>/doctrine/
- *   Skills    — dirs from <factoryRoot>/skills/ that contain SKILL.md
+ *   Skills   — dirs from <factoryRoot>/skills/ that contain SKILL.md
+ *   Agents   — .md files from <factoryRoot>/agents/ (excluding agents.yaml)
  */
 
 import * as vscode from "vscode";
@@ -13,11 +14,11 @@ import * as path from "path";
 
 // ── Tree item types ──────────────────────────────────────────────────────────
 
-type FactoryTreeItem = GroupItem | DoctrineFileItem | SkillItem | PlaceholderItem;
+type FactoryTreeItem = GroupItem | DoctrineFileItem | SkillItem | AgentItem | PlaceholderItem;
 
 class GroupItem extends vscode.TreeItem {
   constructor(
-    public readonly groupId: "doctrine" | "skills",
+    public readonly groupId: "doctrine" | "skills" | "agents",
     label: string,
     count: number
   ) {
@@ -28,7 +29,9 @@ class GroupItem extends vscode.TreeItem {
         : vscode.TreeItemCollapsibleState.Collapsed
     );
     this.contextValue = `devoryGroup.${groupId}`;
-    this.iconPath = new vscode.ThemeIcon(groupId === "doctrine" ? "law" : "library");
+    this.iconPath = new vscode.ThemeIcon(
+      groupId === "doctrine" ? "law" : groupId === "agents" ? "robot" : "library"
+    );
   }
 }
 
@@ -78,6 +81,23 @@ class SkillItem extends vscode.TreeItem {
   }
 }
 
+class AgentItem extends vscode.TreeItem {
+  constructor(
+    public readonly filePath: string,
+    agentName: string
+  ) {
+    super(agentName, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = "devoryAgent";
+    this.tooltip = filePath;
+    this.iconPath = new vscode.ThemeIcon("robot");
+    this.command = {
+      command: "vscode.open",
+      title: "Open Agent",
+      arguments: [vscode.Uri.file(filePath)],
+    };
+  }
+}
+
 // ── Provider ─────────────────────────────────────────────────────────────────
 
 export class FactoryTreeProvider implements vscode.TreeDataProvider<FactoryTreeItem> {
@@ -106,6 +126,7 @@ export class FactoryTreeProvider implements vscode.TreeDataProvider<FactoryTreeI
       return Promise.resolve([
         new GroupItem("doctrine", "Doctrine", this.listDoctrineFiles().length),
         new GroupItem("skills", "Skills", this.listSkills().length),
+        new GroupItem("agents", "Agents", this.listAgents().length),
       ]);
     }
 
@@ -124,6 +145,15 @@ export class FactoryTreeProvider implements vscode.TreeDataProvider<FactoryTreeI
         }
         return Promise.resolve(skills.map(({ name, mdPath }) => new SkillItem(mdPath, name)));
       }
+      if (element.groupId === "agents") {
+        const agents = this.listAgents();
+        if (agents.length === 0) {
+          return Promise.resolve([new PlaceholderItem("Create agent →", "devory.agentCreate")]);
+        }
+        return Promise.resolve(
+          agents.map(({ name, filePath }) => new AgentItem(filePath, name))
+        );
+      }
     }
 
     return Promise.resolve([]);
@@ -138,6 +168,27 @@ export class FactoryTreeProvider implements vscode.TreeDataProvider<FactoryTreeI
         .filter((f) => f.endsWith(".md") && !fs.statSync(path.join(doctrineDir, f)).isDirectory())
         .sort()
         .map((f) => path.join(doctrineDir, f));
+    } catch {
+      return [];
+    }
+  }
+
+  private listAgents(): Array<{ name: string; filePath: string }> {
+    const agentsDir = path.join(this.factoryRoot, "agents");
+    if (!fs.existsSync(agentsDir)) return [];
+    try {
+      return fs
+        .readdirSync(agentsDir)
+        .filter((f) => {
+          if (!f.endsWith(".md")) return false;
+          const fullPath = path.join(agentsDir, f);
+          return fs.statSync(fullPath).isFile();
+        })
+        .sort()
+        .map((f) => ({
+          name: f.replace(/\.md$/, ""),
+          filePath: path.join(agentsDir, f),
+        }));
     } catch {
       return [];
     }

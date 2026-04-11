@@ -592,6 +592,32 @@ export function isFeatureEnabled(feature: ProFeature, info: LicenseInfo): boolea
   }
 }
 
+// ---------------------------------------------------------------------------
+// Sync workspace gating
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true if the given license allows syncing the given workspace.
+ *
+ * Rules:
+ * - Core → always false (no sync)
+ * - Pro  → true only for personal workspaces (owner_org_id is null/undefined)
+ * - Teams → true only when license.orgId matches workspace.owner_org_id
+ *
+ * Pure function — no I/O.
+ */
+export function canSyncWorkspace(
+  license: LicenseInfo,
+  workspace: { owner_org_id?: string },
+): boolean {
+  if (license.tier === "core") return false;
+  const isTeam = typeof workspace.owner_org_id === "string" && workspace.owner_org_id.trim() !== "";
+  if (license.tier === "pro") return !isTeam;
+  // teams tier
+  if (!license.orgId) return false;
+  return license.orgId === workspace.owner_org_id;
+}
+
 /**
  * One-line advisory shown to Core users when a Pro-only field is configured.
  */

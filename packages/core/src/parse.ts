@@ -41,6 +41,7 @@ export interface TaskMeta {
   quality_priority?: string;
   speed_priority?: string;
   max_cost_tier?: string;
+  skills?: string[];
 
   // Bundle / epic fields (all optional)
   bundle_id?: string;
@@ -53,6 +54,23 @@ export interface TaskMeta {
 export interface ParseResult {
   meta: Partial<TaskMeta>;
   body: string;
+}
+
+function parseInlineArray(value: string): string[] | null {
+  const inlineArrayMatch = value.match(/^\[(.*)\]$/);
+  if (!inlineArrayMatch) {
+    return null;
+  }
+
+  const rawItems = inlineArrayMatch[1].trim();
+  if (rawItems === "") {
+    return [];
+  }
+
+  return rawItems
+    .split(",")
+    .map((item) => item.trim().replace(/^['\"]|['\"]$/g, ""))
+    .filter((item) => item.length > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +112,8 @@ export function parseFrontmatter(content: string): ParseResult {
       if (val === "" || val === "[]") {
         (meta as Record<string, unknown>)[currentKey] = [];
       } else {
-        (meta as Record<string, unknown>)[currentKey] = val;
+        const inlineArray = parseInlineArray(val);
+        (meta as Record<string, unknown>)[currentKey] = inlineArray ?? val;
       }
     }
   }

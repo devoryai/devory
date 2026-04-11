@@ -2,10 +2,12 @@
  * packages/cli/src/commands/task-new.ts
  *
  * `devory task new` — create a new task skeleton in the backlog.
- * Delegates to `scripts/task-new.ts` via spawn.
+ * Calls createTask() from the shared workspace API directly.
  */
 
-import { spawnSync } from "child_process";
+import path from "path";
+import { resolveFactoryRoot } from "../lib/factory-root.ts";
+import { createTask, buildTaskFilename } from "../lib/workspace.ts";
 import { buildTsxInvocation } from "../lib/tsx.ts";
 
 export const NAME = "task new";
@@ -77,7 +79,7 @@ export function parseArgs(
 
 /**
  * Build the tsx invocation for this command.
- * Returns [command, ...args] suitable for spawnSync.
+ * Kept for backward compatibility — new callers should use createTask() directly.
  */
 export function buildInvocation(args: TaskNewArgs): string[] {
   const argv = ["--id", args.id, "--title", args.title, "--project", args.project];
@@ -90,9 +92,38 @@ export function buildInvocation(args: TaskNewArgs): string[] {
   return buildTsxInvocation("scripts/task-new.ts", argv);
 }
 
-/** Execute the command, returning the process exit code. */
+/** Execute the command via the shared workspace API, returning the process exit code. */
 export function run(args: TaskNewArgs): number {
-  const [cmd, ...rest] = buildInvocation(args);
-  const result = spawnSync(cmd, rest, { stdio: "inherit" });
-  return result.status ?? 1;
+  const { root: factoryRoot } = resolveFactoryRoot();
+  const result = createTask(args, { factoryRoot, dryRun: args.dryRun });
+
+  const SEP = "=".repeat(56);
+  const filename = buildTaskFilename(args.id, args.title);
+  const relPath = path.relative(factoryRoot, path.join(factoryRoot, "tasks", "backlog", filename));
+
+  console.log(`\n${SEP}`);
+  console.log("  TASK-NEW");
+  console.log(`  ID:      ${args.id}`);
+  console.log(`  Title:   ${args.title}`);
+  console.log(`  Project: ${args.project}`);
+  console.log(`  File:    ${relPath}`);
+  console.log(SEP);
+
+  if (!result.ok) {
+    console.error(`\n[task-new] ${result.error}`);
+    console.error(`\n${SEP}\n`);
+    return 1;
+  }
+
+  if (args.dryRun) {
+    console.log("\n[task-new] Dry run — skeleton content:\n");
+    console.log(result.content);
+    console.log(`\n[task-new] Would write to: ${relPath}`);
+  } else {
+    console.log(`\n[task-new] Created: ${relPath}`);
+    console.log("[task-new] Edit the file to fill in goal, context, and acceptance criteria.");
+  }
+
+  console.log(`\n${SEP}\n`);
+  return 0;
 }

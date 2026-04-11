@@ -73,6 +73,15 @@ depends_on: []
     assert.deepEqual(meta.depends_on, []);
   });
 
+  test("parses inline array values", () => {
+    const content = `---
+skills: [database-migration, test-generation]
+---
+`;
+    const { meta } = parseFrontmatter(content);
+    assert.deepEqual(meta.skills, ["database-migration", "test-generation"]);
+  });
+
   test("body does not include frontmatter", () => {
     const content = `---
 id: factory-001

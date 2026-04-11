@@ -80,6 +80,7 @@ describe("LIFECYCLE_STAGES", () => {
     assert.ok(LIFECYCLE_STAGES.includes("doing"));
     assert.ok(LIFECYCLE_STAGES.includes("review"));
     assert.ok(LIFECYCLE_STAGES.includes("blocked"));
+    assert.ok(LIFECYCLE_STAGES.includes("archived"));
     assert.ok(LIFECYCLE_STAGES.includes("done"));
   });
 });
@@ -123,6 +124,34 @@ describe("listTasksInStage", () => {
     const tasks = listTasksInStage(tasksDir, "ready");
     assert.equal(tasks.length, 1);
     assert.equal(tasks[0].id, "factory-003");
+  });
+
+  test("sorts done tasks by most recent modified time first", () => {
+    const doneDir = path.join(tasksDir, "done");
+    const olderPath = path.join(doneDir, "factory-005-older.md");
+    const newerPath = path.join(doneDir, "factory-006-newer.md");
+    writeTask(
+      doneDir,
+      "factory-005-older.md",
+      makeTaskContent({ id: "factory-005", title: "Older", project: "test", status: "done", priority: "low" })
+    );
+    writeTask(
+      doneDir,
+      "factory-006-newer.md",
+      makeTaskContent({ id: "factory-006", title: "Newer", project: "test", status: "done", priority: "low" })
+    );
+
+    const olderDate = new Date("2026-01-01T00:00:00.000Z");
+    const newerDate = new Date("2026-01-02T00:00:00.000Z");
+    fs.utimesSync(olderPath, olderDate, olderDate);
+    fs.utimesSync(newerPath, newerDate, newerDate);
+
+    const tasks = listTasksInStage(tasksDir, "done");
+    assert.equal(tasks[0].id, "factory-006");
+    assert.equal(tasks[1].id, "factory-005");
+
+    fs.rmSync(olderPath, { force: true });
+    fs.rmSync(newerPath, { force: true });
   });
 });
 

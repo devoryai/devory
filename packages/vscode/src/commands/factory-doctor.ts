@@ -10,6 +10,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { spawn } from "child_process";
 import { findDevoryCli } from "../lib/find-devory-cli.js";
+import { buildCliSpawnEnv } from "../lib/cli-spawn-env.js";
 
 interface SpawnResult {
   exitCode: number;
@@ -26,7 +27,7 @@ function spawnCommand(
   return new Promise((resolve) => {
     const child = spawn(bin, args, {
       cwd,
-      env: { ...process.env, DEVORY_FACTORY_ROOT: cwd },
+      env: buildCliSpawnEnv(cwd, bin),
       shell: false,
     });
 

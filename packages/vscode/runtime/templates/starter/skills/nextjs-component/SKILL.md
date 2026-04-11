@@ -10,7 +10,7 @@ tags: [nextjs, app-router, react, server-components, client-components, typescri
 
 This skill applies when the task involves any of the following:
 
-- Implementing a new page, layout, or component in a Next.js App Router project (`apps/devory` or `../devory-website`)
+- Implementing a new page, layout, or component in a Next.js App Router project
 - Modifying an existing component that may need Server/Client boundary changes
 - Debugging a component that has hydration errors, incorrect `"use client"` placement, or data fetching in the wrong layer
 - Implementing a new route segment: `page.tsx`, `layout.tsx`, `loading.tsx`, or `error.tsx`

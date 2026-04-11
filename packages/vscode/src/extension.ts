@@ -3,8 +3,9 @@
  *
  * Devory VS Code Extension — entry point.
  *
- * Registers all commands and the task/factory explorer tree views.
- * All data access goes through packages/vscode/src/lib/ (shared, testable).
+ * Registers all commands and the task explorer tree view.
+ * All data access goes through packages/vscode/src/lib/ (shared, testable)
+ * or through @devory/cli invocation builders (factory-063+).
  */
 
 import * as vscode from "vscode";
@@ -32,26 +33,39 @@ import { doctrineCreateCommand } from "./commands/doctrine-create.js";
 import { skillCreateCommand } from "./commands/skill-create.js";
 import { doctrineArchiveCommand } from "./commands/doctrine-archive.js";
 import { skillArchiveCommand } from "./commands/skill-archive.js";
+import { agentCreateCommand } from "./commands/agent-create.js";
 import { taskArchiveCommand } from "./commands/task-archive.js";
 import { taskEnrichCommand, addSectionCommand } from "./commands/task-enrich.js";
+import {
+  readGovernanceStatus,
+  formatGovernanceStatusBarText,
+  formatGovernanceStatusSummary,
+} from "./lib/governance-status.js";
+import { resolveTasksDir } from "./lib/task-paths.js";
 import {
   shouldShowBootstrap,
   markFirstRunComplete,
   runBootstrapFlow,
 } from "./lib/bootstrap.js";
+import {
+  showStoredDataLocationsCommand,
+  cleanupLocalDataCommand,
+  sweepWorkshopCommand,
+} from "./commands/cleanup.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const factoryRoot = getFactoryRoot();
-  const paths = getFactoryPaths(factoryRoot);
   const runtimeRoot = getExtensionRuntimeRoot(context.extensionPath);
+  const governanceOutput = vscode.window.createOutputChannel("Devory: Governance");
   const runOutput = vscode.window.createOutputChannel("Devory: Run");
   const doctorOutput = vscode.window.createOutputChannel("Devory: Doctor");
   const initOutput = vscode.window.createOutputChannel("Devory: Init");
+  const storageOutput = vscode.window.createOutputChannel("Devory: Storage");
 
-  context.subscriptions.push(runOutput, doctorOutput, initOutput);
+  context.subscriptions.push(governanceOutput, runOutput, doctorOutput, initOutput, storageOutput);
 
   // ── Task Tree View ────────────────────────────────────────────────────────
-  const treeProvider = new TaskTreeProvider(paths.tasksDir);
+  const treeProvider = new TaskTreeProvider(resolveTasksDir(factoryRoot));
 
   const treeView = vscode.window.createTreeView("devoryTaskExplorer", {
     treeDataProvider: treeProvider,
@@ -70,19 +84,54 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(factoryTreeView);
 
+  const governanceStatusBar = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    98,
+  );
+  governanceStatusBar.command = "devory.showGovernanceStatus";
+  context.subscriptions.push(governanceStatusBar);
+
+  const refreshGovernanceStatus = () => {
+    const snapshot = readGovernanceStatus(getFactoryRoot());
+    governanceStatusBar.text = formatGovernanceStatusBarText(snapshot);
+    governanceStatusBar.tooltip = formatGovernanceStatusSummary(snapshot);
+    governanceStatusBar.show();
+  };
+
+  refreshGovernanceStatus();
+
   syncCapabilityContext(factoryRoot, runtimeRoot);
 
-  // Refresh when workspace config changes
+  // Refresh tree when workspace config changes
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration("devory")) {
         const newRoot = getFactoryRoot();
-        const newPaths = getFactoryPaths(newRoot);
-        treeProvider.setTasksDir(newPaths.tasksDir);
+        treeProvider.setTasksDir(resolveTasksDir(newRoot));
         factoryTreeProvider.setFactoryRoot(newRoot);
         syncCapabilityContext(newRoot, runtimeRoot);
+        refreshGovernanceStatus();
       }
     })
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument((doc) => {
+      const normalized = doc.uri.fsPath.replace(/\\/g, "/");
+      if (
+        normalized.endsWith("/.devory/governance.json") ||
+        normalized.endsWith("/.devory/feature-flags.json") ||
+        normalized.endsWith("/.devory-governance/config.json")
+      ) {
+        refreshGovernanceStatus();
+      }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeWindowState(() => {
+      refreshGovernanceStatus();
+    }),
   );
 
   // ── Commands ──────────────────────────────────────────────────────────────
@@ -91,6 +140,27 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("devory.refresh", () => {
       treeProvider.refresh();
       factoryTreeProvider.refresh();
+      refreshGovernanceStatus();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.showGovernanceStatus", async () => {
+      const snapshot = readGovernanceStatus(getFactoryRoot());
+      const summary = formatGovernanceStatusSummary(snapshot);
+
+      governanceOutput.clear();
+      governanceOutput.appendLine(summary);
+      governanceOutput.show(true);
+
+      const cloudSummary = summary
+        .split("\n")
+        .find((line) => line.startsWith("Cloud commands:"));
+      const headline = `Devory governance is ${snapshot.indicator}.`;
+      const detail = cloudSummary ? ` ${cloudSummary}` : "";
+
+      await vscode.window.showInformationMessage(`${headline}${detail}`);
+      refreshGovernanceStatus();
     })
   );
 
@@ -103,7 +173,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      taskListCommand(getFactoryPaths(root).tasksDir);
+      taskListCommand(resolveTasksDir(root));
     })
   );
 
@@ -129,7 +199,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      const { tasksDir } = getFactoryPaths(root);
+      const tasksDir = resolveTasksDir(root);
       taskMoveCommand(root, tasksDir, () => treeProvider.refresh());
     })
   );
@@ -143,7 +213,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      const { tasksDir } = getFactoryPaths(root);
+      const tasksDir = resolveTasksDir(root);
       taskPromoteCommand(root, tasksDir, () => treeProvider.refresh(), target);
     })
   );
@@ -157,7 +227,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      taskReviewCommand(getFactoryPaths(root).tasksDir, target);
+      taskReviewCommand(resolveTasksDir(root), target);
     })
   );
 
@@ -172,7 +242,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       taskReviewActionCommand(
         getFactoryRoot(),
-        getFactoryPaths(root).tasksDir,
+        resolveTasksDir(root),
         "approve",
         () => treeProvider.refresh(),
         target
@@ -191,7 +261,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       taskReviewActionCommand(
         root,
-        getFactoryPaths(root).tasksDir,
+        resolveTasksDir(root),
         "send-back",
         () => treeProvider.refresh(),
         target
@@ -210,7 +280,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       taskReviewActionCommand(
         root,
-        getFactoryPaths(root).tasksDir,
+        resolveTasksDir(root),
         "block",
         () => treeProvider.refresh(),
         target
@@ -227,7 +297,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      taskRequeueCommand(root, getFactoryPaths(root).tasksDir, () => treeProvider.refresh(), target);
+      taskRequeueCommand(root, resolveTasksDir(root), () => treeProvider.refresh(), target);
     })
   );
 
@@ -240,40 +310,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      const { tasksDir } = getFactoryPaths(root);
-      taskArchiveCommand(root, tasksDir, () => treeProvider.refresh(), target);
-    })
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand("devory.doctrineCreate", () => {
-      doctrineCreateCommand(getFactoryRoot(), () => factoryTreeProvider.refresh());
-    })
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand("devory.skillCreate", () => {
-      skillCreateCommand(getFactoryRoot(), runtimeRoot, () => factoryTreeProvider.refresh());
-    })
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand("devory.doctrineArchive", (target) => {
-      if (!target?.filePath) {
-        vscode.window.showInformationMessage("Devory: select a doctrine file to archive.");
-        return;
-      }
-      doctrineArchiveCommand(getFactoryRoot(), target.filePath, () => factoryTreeProvider.refresh());
-    })
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand("devory.skillArchive", (target) => {
-      if (!target?.skillMdPath) {
-        vscode.window.showInformationMessage("Devory: select a skill to archive.");
-        return;
-      }
-      skillArchiveCommand(getFactoryRoot(), target.skillMdPath, () => factoryTreeProvider.refresh());
+      taskArchiveCommand(root, resolveTasksDir(root), () => treeProvider.refresh(), target);
     })
   );
 
@@ -349,21 +386,52 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("devory.artifactInspect", () => {
-      const root = getFactoryRoot();
-      const capabilities = detectWorkspaceCapabilities(root, runtimeRoot);
-      const blockedMessage = getUnsupportedCommandMessage("artifactInspect", capabilities);
-      if (blockedMessage) {
-        vscode.window.showInformationMessage(blockedMessage);
-        return;
-      }
-      artifactInspectCommand(getFactoryPaths(root).artifactsDir);
+    vscode.commands.registerCommand("devory.factoryDoctor", () => {
+      factoryDoctorCommand(getFactoryRoot(), doctorOutput);
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("devory.factoryDoctor", () => {
-      factoryDoctorCommand(getFactoryRoot(), doctorOutput);
+    vscode.commands.registerCommand("devory.doctrineCreate", () => {
+      doctrineCreateCommand(getFactoryRoot(), () => factoryTreeProvider.refresh());
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.skillCreate", () => {
+      skillCreateCommand(getFactoryRoot(), runtimeRoot, () => factoryTreeProvider.refresh());
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.agentCreate", () => {
+      agentCreateCommand(getFactoryRoot(), () => factoryTreeProvider.refresh());
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.doctrineArchive", (target) => {
+      const filePath =
+        typeof target?.filePath === "string"
+          ? target.filePath
+          : typeof target?.resourceUri?.fsPath === "string"
+            ? target.resourceUri.fsPath
+            : "";
+      if (!filePath) return;
+      doctrineArchiveCommand(getFactoryRoot(), filePath, () => factoryTreeProvider.refresh());
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.skillArchive", (target) => {
+      const skillMdPath =
+        typeof target?.skillMdPath === "string"
+          ? target.skillMdPath
+          : typeof target?.resourceUri?.fsPath === "string"
+            ? target.resourceUri.fsPath
+            : "";
+      if (!skillMdPath) return;
+      skillArchiveCommand(getFactoryRoot(), skillMdPath, () => factoryTreeProvider.refresh());
     })
   );
 
@@ -383,8 +451,40 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.artifactInspect", () => {
+      const root = getFactoryRoot();
+      const capabilities = detectWorkspaceCapabilities(root, runtimeRoot);
+      const blockedMessage = getUnsupportedCommandMessage("artifactInspect", capabilities);
+      if (blockedMessage) {
+        vscode.window.showInformationMessage(blockedMessage);
+        return;
+      }
+      artifactInspectCommand(getFactoryPaths(root).artifactsDir);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.showStoredDataLocations", () => {
+      void showStoredDataLocationsCommand(context, getFactoryRoot(), storageOutput);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.sweepWorkshop", () => {
+      void sweepWorkshopCommand(context, getFactoryRoot(), storageOutput);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.cleanupLocalData", () => {
+      void cleanupLocalDataCommand(context, getFactoryRoot(), storageOutput);
+    })
+  );
+
   // ── First-run bootstrap ───────────────────────────────────────────────────
-  // Fires after a short delay so VS Code has finished rendering the workspace.
+  // Runs asynchronously after a short delay so VS Code has finished rendering
+  // the workspace before we show a notification.
   setTimeout(() => {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) return;
@@ -414,7 +514,7 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {
-  // No cleanup needed
+  // No cleanup needed for MVP
 }
 
 function syncCapabilityContext(factoryRoot: string, runtimeRoot: string): void {

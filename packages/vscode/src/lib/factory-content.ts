@@ -18,6 +18,7 @@ Add examples, boundaries, or references if they help future authors apply this d
 `;
 
 export const SKILL_NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
+export const AGENT_NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
 
 export type FactoryContentCreateResult =
   | { ok: true; filePath: string }
@@ -155,6 +156,47 @@ export function createSkillFile(
   fs.mkdirSync(skillDir, { recursive: true });
   fs.writeFileSync(skillFile, readSkillTemplate(factoryRoot, runtimeRoot), "utf-8");
   return { ok: true, filePath: skillFile };
+}
+
+const AGENT_TEMPLATE = `# agent-id
+
+## Purpose
+Describe what this agent does and when to use it.
+
+## Input
+A task packet with repo, branch, goal, acceptance criteria, and verification commands.
+
+## Output
+Code changes, summary, changed file list, verification results.
+
+## Rules
+- Follow acceptance criteria strictly
+- Run required verification commands
+- Do not mark complete if checks fail
+- Move task to blocked if a real blocker is found
+`;
+
+export function createAgentFile(
+  factoryRoot: string,
+  agentName: string
+): FactoryContentCreateResult {
+  const trimmedName = agentName.trim();
+  if (!AGENT_NAME_PATTERN.test(trimmedName)) {
+    return {
+      ok: false,
+      error: `Invalid agent name "${agentName}". Expected lowercase kebab-case matching ^[a-z][a-z0-9-]*$`,
+    };
+  }
+
+  const agentsDir = path.join(factoryRoot, "agents");
+  const filePath = path.join(agentsDir, `${trimmedName}.md`);
+  if (fs.existsSync(filePath)) {
+    return { ok: false, error: `Agent already exists: agents/${trimmedName}.md` };
+  }
+
+  fs.mkdirSync(agentsDir, { recursive: true });
+  fs.writeFileSync(filePath, AGENT_TEMPLATE.replace("agent-id", trimmedName), "utf-8");
+  return { ok: true, filePath };
 }
 
 export function archiveDoctrineFile(

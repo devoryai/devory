@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the code style expectations for all Saltware projects.
+This document defines the code style expectations for projects using this doctrine.
 
 Consistent style improves readability, maintainability, and collaboration across the codebase.
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the testing expectations for all code generated or modified within the Saltware platform.
+This document defines the testing expectations for all code generated or modified within this codebase.
 
 Testing is not optional.
 
@@ -124,7 +124,7 @@ Preferred structure:
 
 ## Purpose
 
-This document defines the testing expectations for all code generated or modified within the Saltware platform.
+This document defines the testing expectations for all code generated or modified within this codebase.
 
 Testing is not optional.
 

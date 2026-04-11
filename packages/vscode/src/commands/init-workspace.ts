@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { spawn } from "child_process";
 import { findDevoryCli } from "../lib/find-devory-cli.js";
+import { buildCliSpawnEnv } from "../lib/cli-spawn-env.js";
 import { seedStarterFiles } from "../lib/seed-starter.js";
 
 // ---------------------------------------------------------------------------
@@ -80,23 +81,32 @@ const FACTORY_CONTEXT = `# Factory Context
 
 ## Purpose
 
-This file defines the context every AI worker loads before performing work in this Devory workspace.
+This file defines the context every AI worker loads before performing work in this workspace.
 
 ## Doctrine
 
 Doctrine files define the engineering rules every run must follow.
-The worker loads files listed below automatically — edit this list as your project grows.
+Load all top-level doctrine files by default except \`doctrine/product-philosophy.md\`.
 
 Always load these:
 
 - doctrine/engineering-principles.md
+- doctrine/architecture-rules.md
 - doctrine/testing-standard.md
 - doctrine/workflow-rules.md
+- doctrine/common-mistakes.md
 - doctrine/code-style.md
+- doctrine/task-writing-standard.md
+- doctrine/prompt-guidelines.md
+- doctrine/documentation-standard.md
+- doctrine/database-standard.md
+- doctrine/security-philosophy.md
+- doctrine/data-analytics-formatting.md
+- doctrine/git-workflow-standard.md
 
 Load when relevant:
 
-(add conditional doctrine files here)
+- doctrine/product-philosophy.md
 
 ## Skills
 
@@ -220,7 +230,7 @@ export async function initWorkspaceCommand(
       const child = spawn(cliBin!, ["init"], {
         cwd,
         shell: false,
-        env: { ...process.env },
+        env: buildCliSpawnEnv(cwd, cliBin!),
       });
 
       child.stdout.on("data", (chunk: Buffer) => {

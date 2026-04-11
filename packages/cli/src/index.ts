@@ -102,3 +102,9 @@ export {
   checkRuntimeConfig,
 } from "./commands/doctor.ts";
 export type { DoctorArgs } from "./commands/doctor.ts";
+
+export {
+  evaluateCloudCommandReadiness,
+  formatCloudCommandReadinessLine,
+} from "./commands/governance.ts";
+export type { CloudCommandReadiness } from "./commands/governance.ts";

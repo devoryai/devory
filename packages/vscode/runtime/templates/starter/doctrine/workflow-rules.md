@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the workflow rules used by the AI development factory and Saltware engineering process.
+This document defines the workflow rules used by projects that adopt this workflow.
 
 These rules ensure that work is:
 
@@ -29,6 +29,9 @@ Work should always be:
 Large, ambiguous tasks should be decomposed before execution.
 
 The system should prioritize **steady progress through small completed units of work** rather than large unfinished efforts.
+
+Git workflow expectations, including hook responsibilities and commit message
+conventions, are defined in `doctrine/git-workflow-standard.md`.
 
 ---
 

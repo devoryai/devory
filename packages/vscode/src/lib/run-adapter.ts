@@ -23,6 +23,7 @@ export interface RunRuntimeInvocation {
 
 export interface RunAdapterResult {
   exitCode: number;
+  signal: string | null;
   stdout: string;
   stderr: string;
 }
@@ -32,6 +33,7 @@ export interface RunStartWorkflowResult {
   message: string;
   stdout: string;
   stderr: string;
+  noOutput: boolean;
 }
 
 export function resolvePackagedRunInvocation(
@@ -62,7 +64,8 @@ export function resolvePackagedRunInvocation(
 }
 
 export function runPackagedRuntime(
-  invocation: RunRuntimeInvocation
+  invocation: RunRuntimeInvocation,
+  onOutput?: (chunk: string) => void
 ): Promise<RunAdapterResult> {
   return new Promise((resolve) => {
     const child = spawn(invocation.command, invocation.args, {
@@ -74,17 +77,26 @@ export function runPackagedRuntime(
     const stdout: string[] = [];
     const stderr: string[] = [];
 
-    child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk.toString()));
-    child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk.toString()));
+    child.stdout.on("data", (chunk: Buffer) => {
+      const text = chunk.toString();
+      stdout.push(text);
+      onOutput?.(text);
+    });
+    child.stderr.on("data", (chunk: Buffer) => {
+      const text = chunk.toString();
+      stderr.push(text);
+      onOutput?.(text);
+    });
 
     child.on("error", (error: Error) => {
       stderr.push(error.message);
-      resolve({ exitCode: 1, stdout: stdout.join(""), stderr: stderr.join("") });
+      resolve({ exitCode: 1, signal: null, stdout: stdout.join(""), stderr: stderr.join("") });
     });
 
-    child.on("close", (code: number | null) => {
+    child.on("close", (code: number | null, signal: NodeJS.Signals | null) => {
       resolve({
         exitCode: code ?? 1,
+        signal: signal ?? null,
         stdout: stdout.join(""),
         stderr: stderr.join(""),
       });
@@ -96,10 +108,33 @@ export async function startFactoryRun(
   factoryRoot: string,
   runtimeRoot: string,
   args: RunStartArgs,
-  runner: (invocation: RunRuntimeInvocation) => Promise<RunAdapterResult> = runPackagedRuntime
+  runner: (invocation: RunRuntimeInvocation, onOutput?: (chunk: string) => void) => Promise<RunAdapterResult> = runPackagedRuntime,
+  onOutput?: (chunk: string) => void
 ): Promise<RunStartWorkflowResult> {
   const invocation = resolvePackagedRunInvocation(factoryRoot, runtimeRoot, args);
-  const result = await runner(invocation);
+
+  if (onOutput) {
+    const nodeName = path.basename(invocation.command);
+    const runnerFile = path.basename(invocation.args[0]);
+    const runnerFlags = invocation.args.slice(1);
+    const cmdDisplay = [nodeName, runnerFile, ...runnerFlags].join(" ");
+    onOutput(`[Devory] Workspace: ${factoryRoot}\n`);
+    onOutput(`[Devory] Runner: ${cmdDisplay}\n`);
+  }
+
+  const result = await runner(invocation, onOutput);
+  const noOutput = result.stdout.length === 0 && result.stderr.length === 0;
+
+  if (onOutput) {
+    if (result.signal) {
+      onOutput(`[Devory] Process killed by signal ${result.signal}.\n`);
+    } else {
+      onOutput(`[Devory] Exited with code ${result.exitCode}.\n`);
+    }
+    if (result.exitCode === 0 && noOutput) {
+      onOutput("[Devory] No output received — no ready tasks detected.\n");
+    }
+  }
 
   if (result.exitCode !== 0) {
     return {
@@ -108,6 +143,7 @@ export async function startFactoryRun(
         `Devory: ${args.resumeId ? "run resume" : "factory run"} failed (exit ${result.exitCode})\n${result.stderr || result.stdout}`,
       stdout: result.stdout,
       stderr: result.stderr,
+      noOutput,
     };
   }
 
@@ -119,5 +155,6 @@ export async function startFactoryRun(
         : "Devory: factory run completed. Use Devory: Inspect Recent Runs to review the result.",
     stdout: result.stdout,
     stderr: result.stderr,
+    noOutput,
   };
 }

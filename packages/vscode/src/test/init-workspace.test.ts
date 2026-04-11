@@ -54,7 +54,7 @@ describe("runBuiltinInit", () => {
     const output = makeOutputSpy();
     runBuiltinInit(tmp, output as any);
 
-    for (const stage of ["backlog", "ready", "doing", "review", "done", "blocked"]) {
+    for (const stage of ["backlog", "ready", "doing", "review", "done", "blocked", "archived"]) {
       assert.ok(
         fs.existsSync(path.join(tmp, "tasks", stage)),
         `tasks/${stage} should be created`

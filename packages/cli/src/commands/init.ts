@@ -184,6 +184,7 @@ All work must:
 ## Task lifecycle
 
 Tasks move through: backlog → ready → doing → review → done
+Support stages: blocked, archived
 
 - \`devory task new\`      — create a task
 - \`devory task move\`     — advance a task through the lifecycle
@@ -205,6 +206,7 @@ tasks/               Task files organized by lifecycle stage
   review/            Awaiting review
   done/              Completed
   blocked/           Blocked on something external
+  archived/          Deliberately not scheduled to run
 runs/                Factory run logs and outputs
 artifacts/           Generated artifacts from runs
 templates/           Task file templates
@@ -282,7 +284,7 @@ export function run(args: InitArgs): number {
   // Support directories
   ensureDir(path.join(dir, "runs"));
   ensureDir(path.join(dir, "artifacts"));
-  ensureDir(path.join(dir, "brain"));
+  ensureDir(path.join(dir, "doctrine"));
   ensureDir(path.join(dir, "templates"));
 
   // Core files

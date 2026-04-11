@@ -7,12 +7,78 @@
 
 export { parseFrontmatter } from "./parse.ts";
 export {
+  EXTERNAL_WORK_ITEM_SOURCES,
+  buildExternalWorkItemFixture,
+  normalizeExternalWorkItem,
+} from "./external-work-item.ts";
+export type { ExternalWorkItem, ExternalWorkItemSource } from "./external-work-item.ts";
+export {
+  PLANNING_DEPTHS,
+  PROFILE_COST_TIERS,
+  RISK_TOLERANCES,
+  VALIDATION_STRICTNESSES,
+  buildEngineeringProfileFixture,
+  normalizeEngineeringProfile,
+} from "./engineering-profile.ts";
+export type {
+  EngineeringProfile,
+  PlanningDepth,
+  ProfileCostTier,
+  RiskTolerance,
+  ValidationStrictness,
+} from "./engineering-profile.ts";
+export {
+  BALANCED_DEFAULT_PRESET,
+  DEFAULT_PROFILE_ID,
+  FAST_PROTOTYPING_PRESET,
+  PROFILE_PRESETS,
+  PRODUCTION_SAFE_PRESET,
+  getPresetById,
+} from "./profile-presets.ts";
+export {
+  buildActiveStateFixture,
+  buildDefaultActiveState,
+  normalizeActiveDevoryState,
+} from "./active-state.ts";
+export type { ActiveDevoryState } from "./active-state.ts";
+export {
+  DEFAULT_WORKSPACE,
+  buildWorkspaceFixture,
+  isTeamWorkspace,
+  isWorkspaceOwner,
+  normalizeWorkspace,
+} from "./workspace.ts";
+export type {
+  Workspace,
+  WorkspaceIntegrations,
+  WorkspaceMember,
+  WorkspaceRole,
+} from "./workspace.ts";
+export {
+  SYNCABLE_ARTIFACT_TYPES,
+  buildSyncManifest,
+} from "./sync-manifest.ts";
+export type {
+  SyncEntry,
+  SyncManifest,
+  SyncStatus,
+  SyncableArtifactType,
+} from "./sync-manifest.ts";
+export {
+  WORK_CONTEXT_SOURCES,
+  WORK_CONTEXT_STATUSES,
+  buildWorkContextFixture,
+  normalizeWorkContext,
+} from "./work-context.ts";
+export type { WorkContext, WorkContextSource, WorkContextStatus } from "./work-context.ts";
+export {
   clearLicenseCache,
   clearLicenseToken,
   detectTier,
   getLicenseCacheFilePath,
   getLicenseFilePath,
   getLicenseStatus,
+  canSyncWorkspace,
   isFeatureEnabled,
   tierGateMessage,
   writeLicenseToken,
@@ -38,6 +104,14 @@ export type {
   LoadedStandards,
 } from "./standards.ts";
 export type { TaskMeta, ParseResult } from "./parse.ts";
+export type {
+  LoadedSkillFile,
+  SkillInjection,
+  SkillManifest,
+  SkillMeta,
+} from "./skill-types.ts";
+export { validateSkillFile } from "./skill-validator.ts";
+export type { ValidationResult as SkillValidationResult } from "./skill-validator.ts";
 export {
   factoryPaths,
   findFactoryContextDir,
@@ -367,3 +441,71 @@ export type {
   RoutingPriorityLevel,
   RoutingRuntimeContext,
 } from "./routing-input.ts";
+export {
+  featureFlagsFilePath,
+  loadFeatureFlags,
+} from "./feature-flags.ts";
+export type {
+  DevoryFeatureFlags,
+  FeatureFlagSource,
+  ResolvedFeatureFlags,
+} from "./feature-flags.ts";
+export {
+  AUDIT_ACTOR_TYPES,
+  AUDIT_EVENT_TYPES,
+  GOVERNANCE_COMMIT_SOURCES,
+  GOVERNANCE_COMMIT_TYPES,
+  TASK_STAGES,
+} from "./governance-repo.ts";
+export type {
+  AuditActor,
+  AuditEvent,
+  AuditEventType,
+  CommitAttribution,
+  GovernanceCommitSource,
+  GovernanceCommitType,
+  GovernanceRepoBinding,
+  GovernanceRepoConfig,
+  RunLineage,
+  TaskStage,
+} from "./governance-repo.ts";
+export {
+  COMMAND_OUTCOME_STATUSES,
+  GOVERNANCE_COMMAND_TYPES,
+  isOverrideCommand,
+  parseGovernanceCommandEnvelope,
+  isRunScopedCommand,
+  isTaskScopedCommand,
+  validateGovernanceCommandEnvelope,
+} from "./command-channel.ts";
+export type {
+  ApproveTaskCommand,
+  ApproveTaskPayload,
+  AssignReviewerCommand,
+  AssignReviewerPayload,
+  BaseCommandFields,
+  BlockTaskCommand,
+  BlockTaskPayload,
+  CommandOutcome,
+  CommandOutcomeStatus,
+  GovernanceCommandEnvelope,
+  GovernanceCommandType,
+  GovernanceCommandValidationResult,
+  OverrideModelCommand,
+  OverrideModelPayload,
+  OverrideProfileCommand,
+  OverrideProfilePayload,
+  PauseRunCommand,
+  PauseRunPayload,
+  RequeueTaskCommand,
+  RequeueTaskPayload,
+  ResumeRunCommand,
+  ResumeRunPayload,
+  SendBackTaskCommand,
+  SendBackTaskPayload,
+} from "./command-channel.ts";
+export { evaluateGovernanceCommandTransport } from "./command-transport.ts";
+export type {
+  GovernanceCommandTransportMode,
+  GovernanceCommandTransportResolution,
+} from "./command-transport.ts";

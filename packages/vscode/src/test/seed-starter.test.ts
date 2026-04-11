@@ -58,7 +58,7 @@ describe("seedStarterFiles", () => {
 
   test("copies starter doctrine files into a fresh workspace", () => {
     const output = makeOutputAppender();
-    seedStarterFiles(factoryRoot, runtimeRoot, output);
+    const summary = seedStarterFiles(factoryRoot, runtimeRoot, output);
 
     assert.ok(
       fs.existsSync(path.join(factoryRoot, "doctrine", "engineering-principles.md")),
@@ -68,16 +68,21 @@ describe("seedStarterFiles", () => {
       fs.existsSync(path.join(factoryRoot, "doctrine", "code-style.md")),
       "code-style.md should be seeded"
     );
+    assert.deepEqual(
+      [...summary.doctrine].sort(),
+      ["engineering-principles.md", "code-style.md"].sort()
+    );
   });
 
   test("copies starter skill files into a fresh workspace", () => {
     const output = makeOutputAppender();
-    seedStarterFiles(factoryRoot, runtimeRoot, output);
+    const summary = seedStarterFiles(factoryRoot, runtimeRoot, output);
 
     assert.ok(
       fs.existsSync(path.join(factoryRoot, "skills", "test-generation", "SKILL.md")),
       "SKILL.md should be seeded"
     );
+    assert.deepEqual(summary.skills, ["test-generation"]);
   });
 
   test("appends a confirmation line to the output channel", () => {
@@ -87,6 +92,10 @@ describe("seedStarterFiles", () => {
     assert.ok(
       output.lines.some((l) => l.includes("Starter doctrine and skills copied")),
       "should log confirmation message"
+    );
+    assert.ok(
+      output.lines.some((l) => l.includes("engineering-principles.md") && l.includes("test-generation")),
+      "confirmation should name seeded doctrine and skill content"
     );
   });
 

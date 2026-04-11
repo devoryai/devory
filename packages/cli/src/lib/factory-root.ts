@@ -8,12 +8,12 @@ export {
   factoryPaths,
   findFactoryContextDir,
   resolveFactoryRoot,
-} from "../../../core/src/index.ts";
+} from "@devory/core";
 export type {
   FactoryPaths,
   FactoryRootSource,
-} from "../../../core/src/index.ts";
+} from "@devory/core";
 export type FactoryRootResult = {
   root: string;
-  source: import("../../../core/src/index.ts").FactoryRootSource;
+  source: import("@devory/core").FactoryRootSource;
 };

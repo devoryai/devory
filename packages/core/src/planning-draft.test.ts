@@ -108,4 +108,21 @@ describe("planning draft contract", () => {
     assert.match(serialized, /"kind": "epic"/);
     assert.ok(serialized.endsWith("\n"));
   });
+
+  test("normalizes task drafts with optional external traceability fields", () => {
+    const draft = buildTaskPlanningDraftFixture({
+      external_source: "github-issue",
+      external_key: "owner/repo#123",
+      external_url: "https://github.com/owner/repo/issues/123",
+    });
+
+    const normalized = normalizePlanningDraft(draft);
+    assert.ok(normalized);
+    assert.equal(normalized?.kind, "task");
+    if (normalized?.kind === "task") {
+      assert.equal(normalized.external_source, "github-issue");
+      assert.equal(normalized.external_key, "owner/repo#123");
+      assert.equal(normalized.external_url, "https://github.com/owner/repo/issues/123");
+    }
+  });
 });

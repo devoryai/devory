@@ -3,10 +3,6 @@
  *
  * devory.taskPromote — promote backlog, ready, or doing tasks to the next
  * common lifecycle stage with a lightweight QuickPick flow.
- *
- * For backlog → ready promotions two checks run first:
- *   1. Agent assignment — required; prompts with catalog if missing.
- *   2. Readiness check — soft warning if AC / Verification sections absent.
  */
 
 import * as fs from "fs";
@@ -134,10 +130,10 @@ async function ensureAgentAssigned(
   return agent !== null;
 }
 
-// ---------------------------------------------------------------------------
-// Readiness check
-// ---------------------------------------------------------------------------
-
+/**
+ * Check whether a task file is missing readiness sections (AC, Verification).
+ * Only relevant when promoting from backlog → ready.
+ */
 function missingReadinessSections(taskFilepath: string): string[] {
   let content: string;
   try {
@@ -169,6 +165,7 @@ async function runReadinessCheck(
   );
 
   if (choice === "Add Sections") {
+    // Open the file in the editor, then run enrich so the user can fill it in.
     try {
       const doc = await vscode.workspace.openTextDocument(taskFilepath);
       await vscode.window.showTextDocument(doc);
@@ -184,10 +181,6 @@ async function runReadinessCheck(
   // User dismissed / pressed Escape — cancel.
   return false;
 }
-
-// ---------------------------------------------------------------------------
-// Command
-// ---------------------------------------------------------------------------
 
 export async function taskPromoteCommand(
   factoryRoot: string,

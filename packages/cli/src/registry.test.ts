@@ -14,11 +14,15 @@ import { buildRootHelp, buildCommandHelp, helpFor } from "./help.js";
 import { parseArgs as parseTaskNew, buildInvocation as buildTaskNew } from "./commands/task-new.js";
 import { parseArgs as parseTaskMove, buildInvocation as buildTaskMove } from "./commands/task-move.js";
 import { parseArgs as parseTaskValidate, buildInvocation as buildTaskValidate } from "./commands/task-validate.js";
+import { parseArgs as parseSkillNew } from "./commands/skill-new.js";
+import { parseArgs as parseSkillList } from "./commands/skill-list.js";
+import { parseArgs as parseSkillValidate } from "./commands/skill-validate.js";
 import { parseArgs as parseRun, buildInvocation as buildRun } from "./commands/run.js";
 import { buildConfigReport, formatConfigReport } from "./commands/config.js";
 import { parseArgs as parsePrPrep, buildInvocation as buildPrPrep } from "./commands/pr-prep.js";
 import { parseArgs as parseImprove, buildInvocation as buildImprove } from "./commands/improve.js";
 import { parseArgs as parsePrCreate } from "./commands/pr-create.js";
+import { parseArgs as parseMigrate } from "./commands/migrate.js";
 
 function assertTsxInvocation(inv: string[], scriptName: string) {
   assert.equal(inv[0], process.execPath);
@@ -239,6 +243,65 @@ describe("buildTaskValidate", () => {
   test("omits --status when not provided", () => {
     const inv = buildTaskValidate({ file: "foo.md" });
     assert.ok(!inv.includes("--status"));
+  });
+});
+
+// ── skill validate ───────────────────────────────────────────────────────────
+
+describe("parseSkillNew", () => {
+  test("parses required skill name", () => {
+    const result = parseSkillNew(["database-migration"]);
+    assert.equal(result.error, null);
+    assert.equal(result.args!.name, "database-migration");
+  });
+
+  test("parses --root", () => {
+    const result = parseSkillNew(["database-migration", "--root", "/tmp/factory"]);
+    assert.equal(result.error, null);
+    assert.equal(result.args!.root, "/tmp/factory");
+  });
+
+  test("returns error when name is missing", () => {
+    const result = parseSkillNew([]);
+    assert.ok(result.error !== null);
+  });
+});
+
+describe("parseSkillList", () => {
+  test("parses empty args", () => {
+    const result = parseSkillList([]);
+    assert.equal(result.error, null);
+  });
+
+  test("parses --root", () => {
+    const result = parseSkillList(["--root", "/tmp/factory"]);
+    assert.equal(result.error, null);
+    assert.equal(result.args!.root, "/tmp/factory");
+  });
+
+  test("returns error for unknown args", () => {
+    const result = parseSkillList(["extra"]);
+    assert.ok(result.error !== null);
+  });
+});
+
+describe("parseSkillValidate", () => {
+  test("parses single skill name", () => {
+    const result = parseSkillValidate(["database-migration"]);
+    assert.equal(result.error, null);
+    assert.equal(result.args!.skillName, "database-migration");
+    assert.equal(result.args!.all, undefined);
+  });
+
+  test("parses --all mode", () => {
+    const result = parseSkillValidate(["--all"]);
+    assert.equal(result.error, null);
+    assert.equal(result.args!.all, true);
+  });
+
+  test("returns error when no target provided", () => {
+    const result = parseSkillValidate([]);
+    assert.ok(result.error !== null);
   });
 });
 
@@ -496,5 +559,33 @@ describe("parsePrCreate", () => {
     assert.ok(cmd !== undefined);
     assert.ok(cmd!.description.includes("PR"));
     assert.ok(cmd!.usage.includes("--confirm"));
+  });
+});
+
+describe("parseMigrate", () => {
+  test("parses --to-governance-repo", () => {
+    const result = parseMigrate(["--to-governance-repo"]);
+    assert.equal(result.error, null);
+    assert.equal(result.args?.toGovernanceRepo, true);
+    assert.equal(result.args?.dryRun, false);
+    assert.equal(result.args?.confirm, false);
+  });
+
+  test("parses --dry-run and --confirm", () => {
+    const result = parseMigrate(["--to-governance-repo", "--dry-run", "--confirm"]);
+    assert.equal(result.error, null);
+    assert.equal(result.args?.dryRun, true);
+    assert.equal(result.args?.confirm, true);
+  });
+
+  test("returns error when migration target is missing", () => {
+    const result = parseMigrate([]);
+    assert.ok(result.error?.includes("--to-governance-repo"));
+  });
+
+  test("registry contains migrate command", () => {
+    const cmd = COMMANDS.find((c) => c.name === "migrate");
+    assert.ok(cmd);
+    assert.ok(cmd?.usage.includes("--to-governance-repo"));
   });
 });

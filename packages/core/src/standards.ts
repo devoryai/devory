@@ -5,7 +5,7 @@
  *
  * devory.standards.yml is the user-facing doctrine source — the structured
  * definition of what "good" means for a given codebase. When present it takes
- * precedence over the freeform brain/ markdown files.
+ * precedence over the freeform doctrine/ markdown files.
  *
  * Entry points:
  *   loadStandards(factoryRoot)          — load and parse the YAML file
@@ -69,7 +69,7 @@ export interface Standards {
 // Source descriptor
 // ---------------------------------------------------------------------------
 
-export type StandardsSourceType = "yaml" | "brain" | "none";
+export type StandardsSourceType = "yaml" | "doctrine" | "none";
 
 export interface StandardsSource {
   type: StandardsSourceType;

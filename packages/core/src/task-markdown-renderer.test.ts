@@ -90,4 +90,17 @@ describe("task markdown renderer", () => {
   test("publishes the dedicated renderer version", () => {
     assert.equal(TASK_MARKDOWN_RENDERER_VERSION, "task-markdown-renderer-v1");
   });
+
+  test("renders external traceability fields in frontmatter when present", () => {
+    const draft = buildMinimalTaskDraftFixture({
+      external_source: "github-issue",
+      external_key: "owner/repo#123",
+      external_url: "https://github.com/owner/repo/issues/123",
+    });
+
+    const rendered = renderTaskDraftMarkdown(draft);
+    assert.match(rendered, /external_source: github-issue/);
+    assert.match(rendered, /external_key: owner\/repo#123/);
+    assert.match(rendered, /external_url: https:\/\/github.com\/owner\/repo\/issues\/123/);
+  });
 });

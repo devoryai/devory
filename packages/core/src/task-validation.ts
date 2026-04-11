@@ -1,4 +1,7 @@
+import * as fs from "fs";
+import * as path from "path";
 import { parseFrontmatter } from "./parse.ts";
+import { resolveFactoryRoot } from "./factory-environment.ts";
 import {
   type PlanningDraftValidationRecord,
   type TaskDraftCommitStage,
@@ -17,6 +20,10 @@ export interface TaskDraftValidationResult extends ValidationResult {
   draft_id: string;
   target_stage: TaskDraftCommitStage;
   target_path: string;
+}
+
+export interface ValidateTaskOptions {
+  factoryRoot?: string;
 }
 
 export const REQUIRED_FIELDS: Array<keyof TaskMeta> = [
@@ -53,11 +60,64 @@ function validateTaskCapabilityMetadata(meta: Partial<TaskMeta>): string[] {
   return errors;
 }
 
+function validateTaskSkillsMetadata(
+  meta: Partial<TaskMeta>,
+  options: ValidateTaskOptions
+): Pick<ValidationResult, "errors" | "warnings"> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (meta.skills === undefined) {
+    return { errors, warnings };
+  }
+
+  if (!Array.isArray(meta.skills)) {
+    errors.push('Task metadata "skills" must be an array of non-empty skill names');
+    return { errors, warnings };
+  }
+
+  const declaredSkills: string[] = [];
+  for (const [index, skillName] of meta.skills.entries()) {
+    if (typeof skillName !== "string" || skillName.trim() === "") {
+      errors.push(
+        `Task metadata "skills" entry ${index + 1} must be a non-empty string`
+      );
+      continue;
+    }
+    declaredSkills.push(skillName.trim());
+  }
+
+  if (errors.length > 0 || declaredSkills.length === 0) {
+    return { errors, warnings };
+  }
+
+  const resolvedFactoryRoot = options.factoryRoot ?? resolveFactoryRoot().root;
+  const skillsRoot = path.join(resolvedFactoryRoot, "skills");
+
+  // Soft validation: skip existence checks when no skills root is available.
+  if (!fs.existsSync(skillsRoot) || !fs.statSync(skillsRoot).isDirectory()) {
+    return { errors, warnings };
+  }
+
+  for (const skillName of declaredSkills) {
+    const skillDirectory = path.join(skillsRoot, skillName);
+    if (!fs.existsSync(skillDirectory) || !fs.statSync(skillDirectory).isDirectory()) {
+      warnings.push(
+        `Task metadata "skills" references unknown skill "${skillName}" (expected directory: skills/${skillName})`
+      );
+    }
+  }
+
+  return { errors, warnings };
+}
+
 export function validateTask(
   meta: Partial<TaskMeta>,
-  expectedStatus: string
+  expectedStatus: string,
+  options: ValidateTaskOptions = {}
 ): ValidationResult {
   const errors: string[] = [];
+  const warnings: string[] = [];
 
   for (const field of REQUIRED_FIELDS) {
     const value = meta[field];
@@ -71,8 +131,11 @@ export function validateTask(
   }
 
   errors.push(...validateTaskCapabilityMetadata(meta));
+  const skillsValidation = validateTaskSkillsMetadata(meta, options);
+  errors.push(...skillsValidation.errors);
+  warnings.push(...skillsValidation.warnings);
 
-  return { valid: errors.length === 0, errors, warnings: [] };
+  return { valid: errors.length === 0, errors, warnings };
 }
 
 const REQUIRED_BODY_SECTIONS = [
@@ -128,11 +191,12 @@ export function validateTaskBody(body: string): Pick<ValidationResult, "errors" 
 
 export function validateTaskMarkdown(
   markdown: string,
-  expectedStatus?: string
+  expectedStatus?: string,
+  options: ValidateTaskOptions = {}
 ): ValidationResult {
   const { meta, body } = parseFrontmatter(markdown);
   const statusToCheck = expectedStatus ?? meta.status ?? "";
-  const frontmatterResult = validateTask(meta, statusToCheck);
+  const frontmatterResult = validateTask(meta, statusToCheck, options);
   const bodyResult = validateTaskBody(body);
   const errors = [...frontmatterResult.errors, ...bodyResult.errors];
   const warnings = [...frontmatterResult.warnings, ...bodyResult.warnings];

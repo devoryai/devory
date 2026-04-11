@@ -8,6 +8,7 @@ type: feature
 priority: medium
 status: backlog
 agent: fullstack-builder
+# skills: [database-migration] # Optional: load procedures from skills/<name>/SKILL.md
 depends_on: []
 files_likely_affected: []
 verification:

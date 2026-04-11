@@ -18,13 +18,53 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { randomUUID } from "crypto";
 import {
   TASK_REVIEW_ACTIONS,
   TASK_REVIEW_ACTION_STAGE_MAP,
+  loadFeatureFlags,
   parseFrontmatter,
   validateTask,
+  validateGovernanceCommandEnvelope,
+  type GovernanceCommandEnvelope,
+  type GovernanceRepoBinding,
   type TaskMeta,
 } from "@devory/core";
+ 
+
+/**
+ * Inject `agent: <value>` into the YAML frontmatter block of a task file's
+ * raw content.  Operates only within the opening `---` … `---` block so body
+ * text is never touched.
+ *
+ * - If `agent:` is already present the content is returned unchanged.
+ * - The line is inserted after `priority:` when that field exists, otherwise
+ *   just before the closing `---`.
+ */
+export function insertAgentIntoFrontmatter(content: string, agent: string): string {
+  const fmMatch = content.match(/^(---\n[\s\S]*?\n---\n)/);
+  if (!fmMatch) return content;
+
+  const fm = fmMatch[1];
+
+  // Already has an agent — leave unchanged.
+  if (/^agent:\s*/m.test(fm)) return content;
+
+  const agentLine = `agent: ${agent}`;
+
+  // Prefer to insert after the `priority:` line for consistent field ordering.
+  const priorityMatch = fm.match(/^(priority:[^\n]*\n)/m);
+  let updatedFm: string;
+  if (priorityMatch?.index !== undefined) {
+    const insertAt = (priorityMatch.index ?? 0) + priorityMatch[1].length;
+    updatedFm = fm.slice(0, insertAt) + agentLine + "\n" + fm.slice(insertAt);
+  } else {
+    // Fall back: insert before closing `---`.
+    updatedFm = fm.replace(/\n---\n$/, `\n${agentLine}\n---\n`);
+  }
+
+  return content.replace(fm, updatedFm);
+}
 
 // ---------------------------------------------------------------------------
 // Lifecycle constants
@@ -54,10 +94,6 @@ export const LIFECYCLE_DIR_MAP: Record<LifecycleStage, string> = {
   done: "tasks/done",
 };
 
-// ---------------------------------------------------------------------------
-// Status rewriter (inlined from workers/lib/task-utils.ts)
-// ---------------------------------------------------------------------------
-
 /** Patch only the `status:` line inside the YAML frontmatter block. */
 export function rewriteStatus(content: string, newStatus: string): string {
   const fmMatch = content.match(/^(---\n[\s\S]*?\n---\n)/);
@@ -65,10 +101,6 @@ export function rewriteStatus(content: string, newStatus: string): string {
   const updatedFm = fmMatch[1].replace(/^(status:\s*).*$/m, `$1${newStatus}`);
   return content.replace(fmMatch[1], updatedFm);
 }
-
-// ---------------------------------------------------------------------------
-// Transition log renderer (inlined from workers/lib/workflow-helpers.ts)
-// ---------------------------------------------------------------------------
 
 interface TransitionLogOpts {
   taskId: string;
@@ -119,7 +151,7 @@ function renderTransitionLog(opts: TransitionLogOpts): string {
       "## Transition Complete",
       "",
       `Task \`${taskId}\` moved from \`${fromStatus}\` to \`${toStatus}\`.`,
-      "",
+      ""
     );
   }
 
@@ -185,7 +217,7 @@ export function buildTaskSkeleton(opts: {
   repo_area?: string;
   /** Optional one-sentence goal to pre-populate the Goal section. */
   goal?: string;
-  // Kept for backwards compatibility but no longer written to the minimal template.
+  // Kept for backwards compatibility but no longer written to the template.
   repo?: string;
   branch?: string;
 }): string {
@@ -225,40 +257,6 @@ export function buildTaskSkeleton(opts: {
     "",
     "",
   ].join("\n");
-}
-
-/**
- * Inject `agent: <value>` into the YAML frontmatter block of a task file's
- * raw content.  Operates only within the opening `---` … `---` block so body
- * text is never touched.
- *
- * - If `agent:` is already present the content is returned unchanged.
- * - The line is inserted after `priority:` when that field exists, otherwise
- *   just before the closing `---`.
- */
-export function insertAgentIntoFrontmatter(content: string, agent: string): string {
-  const fmMatch = content.match(/^(---\n[\s\S]*?\n---\n)/);
-  if (!fmMatch) return content;
-
-  const fm = fmMatch[1];
-
-  // Already has an agent — leave unchanged.
-  if (/^agent:\s*/m.test(fm)) return content;
-
-  const agentLine = `agent: ${agent}`;
-
-  // Prefer to insert after the `priority:` line for consistent field ordering.
-  const priorityMatch = fm.match(/^(priority:[^\n]*\n)/m);
-  let updatedFm: string;
-  if (priorityMatch?.index !== undefined) {
-    const insertAt = (priorityMatch.index ?? 0) + priorityMatch[1].length;
-    updatedFm = fm.slice(0, insertAt) + agentLine + "\n" + fm.slice(insertAt);
-  } else {
-    // Fall back: insert before closing `---`.
-    updatedFm = fm.replace(/\n---\n$/, `\n${agentLine}\n---\n`);
-  }
-
-  return content.replace(fm, updatedFm);
 }
 
 /** Return error messages for any missing required frontmatter fields. */
@@ -545,8 +543,10 @@ export type ApplyReviewActionResult =
       toPath: string;
       fromStatus: "review";
       toStatus: LifecycleStage;
+      executionMode: "direct" | "governance-queued";
       transitionArtifactPath: string | null;
       reviewArtifactPath: string | null;
+      governanceCommandPath?: string | null;
     }
   | {
       ok: false;
@@ -592,16 +592,51 @@ export function applyReviewAction(
     };
   }
 
+  const taskId = String(meta.id ?? path.basename(resolvedTask, ".md"));
+  const toStage = reviewActionToStage(args.action);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + "Z";
+
+  const governanceQueue = enqueueGovernanceReviewAction({
+    factoryRoot,
+    taskId,
+    action: args.action,
+    reason: args.reason ?? "",
+  });
+
+  if (governanceQueue.queued) {
+    const reviewArtifactPath = _writeReviewArtifact(factoryRoot, {
+      taskId,
+      action: args.action,
+      fromStage: "review",
+      toStage,
+      timestamp,
+      runId: options.runId ?? null,
+      routingDecisionId: options.routingDecisionId ?? null,
+      reason: args.reason ?? "",
+    });
+
+    return {
+      ok: true,
+      taskId,
+      fromPath: resolvedTask,
+      toPath: resolvedTask,
+      fromStatus: "review",
+      toStatus: toStage,
+      executionMode: "governance-queued",
+      transitionArtifactPath: null,
+      reviewArtifactPath,
+      governanceCommandPath: governanceQueue.commandPath,
+    };
+  }
+
   const transition = moveTask(
-    { task: resolvedTask, to: reviewActionToStage(args.action) },
+    { task: resolvedTask, to: toStage },
     { factoryRoot }
   );
   if (!transition.ok) {
     return transition;
   }
 
-  const taskId = String(meta.id ?? path.basename(resolvedTask, ".md"));
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + "Z";
   const reviewArtifactPath = _writeReviewArtifact(factoryRoot, {
     taskId,
     action: args.action,
@@ -620,9 +655,88 @@ export function applyReviewAction(
     toPath: transition.toPath,
     fromStatus: "review",
     toStatus: transition.toStatus as LifecycleStage,
+    executionMode: "direct",
     transitionArtifactPath: transition.artifactPath,
     reviewArtifactPath,
   };
+}
+
+interface GovernanceReviewEnqueueResult {
+  queued: boolean;
+  commandPath: string | null;
+}
+
+function enqueueGovernanceReviewAction(opts: {
+  factoryRoot: string;
+  taskId: string;
+  action: ReviewAction;
+  reason: string;
+}): GovernanceReviewEnqueueResult {
+  const { factoryRoot } = opts;
+  const { flags } = loadFeatureFlags(factoryRoot);
+  if (!flags.governance_repo_enabled) {
+    return { queued: false, commandPath: null };
+  }
+
+  const bindingPath = path.join(factoryRoot, ".devory", "governance.json");
+  if (!fs.existsSync(bindingPath)) {
+    return { queued: false, commandPath: null };
+  }
+
+  let binding: GovernanceRepoBinding;
+  try {
+    binding = JSON.parse(fs.readFileSync(bindingPath, "utf-8")) as GovernanceRepoBinding;
+  } catch {
+    return { queued: false, commandPath: null };
+  }
+
+  const governanceConfigPath = path.join(
+    binding.governance_repo_path,
+    ".devory-governance",
+    "config.json",
+  );
+  if (!fs.existsSync(governanceConfigPath)) {
+    return { queued: false, commandPath: null };
+  }
+
+  const commandType =
+    opts.action === "approve"
+      ? "approve-task"
+      : opts.action === "send-back"
+        ? "send-back-task"
+        : "block-task";
+  const commandId = `local-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
+  const pendingDir = path.join(factoryRoot, ".devory", "commands", "pending");
+  fs.mkdirSync(pendingDir, { recursive: true });
+
+  const command: GovernanceCommandEnvelope = {
+    command_id: commandId,
+    command_type: commandType,
+    issued_by: process.env.USER ?? "local-user",
+    issued_at: new Date().toISOString(),
+    workspace_id: binding.workspace_id,
+    target_task_id: opts.taskId,
+    target_run_id: undefined,
+    governance_repo_ref: binding.governance_repo_path,
+    expires_at: new Date(Date.now() + 60 * 60_000).toISOString(),
+    payload: {
+      task_id: opts.taskId,
+      ...(opts.reason.trim() ? { reason: opts.reason.trim() } : {}),
+    },
+  } as GovernanceCommandEnvelope;
+
+  const validation = validateGovernanceCommandEnvelope(command);
+  if (!validation.ok) {
+    throw new Error(`Invalid governance review command: ${validation.errors.join("; ")}`);
+  }
+
+  const commandPath = path.join(pendingDir, `${command.command_id}.json`);
+  fs.writeFileSync(commandPath, `${JSON.stringify(command, null, 2)}\n`, {
+    encoding: "utf-8",
+    flag: "wx",
+  });
+
+  return { queued: true, commandPath };
 }
 
 // ---------------------------------------------------------------------------
@@ -648,8 +762,8 @@ function _writeTransitionArtifact(
     const content = renderTransitionLog({
       taskId: opts.taskId,
       filename: opts.filename,
-      fromStatus: opts.fromStatus as LifecycleStage,
-      toStatus: opts.toStatus as LifecycleStage,
+      fromStatus: opts.fromStatus as WorkflowLifecycleStage,
+      toStatus: opts.toStatus as WorkflowLifecycleStage,
       timestamp: ts,
       validationErrors: opts.validationErrors,
     });

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the core engineering philosophy used across Saltware projects and within the AI development factory.
+This document defines the core engineering philosophy used across projects that adopt this doctrine.
 
 These principles guide how software should be designed, implemented, tested, and maintained.
 

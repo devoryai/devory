@@ -195,6 +195,7 @@ describe("applyReviewAction", () => {
     if (!result.ok) return;
 
     assert.equal(result.toStatus, "done");
+    assert.equal(result.executionMode, "direct");
     assert.equal(fs.existsSync(sourcePath), false);
     assert.equal(fs.existsSync(result.toPath), true);
 
@@ -210,6 +211,68 @@ describe("applyReviewAction", () => {
     );
     assert.match(reviewArtifact, /action: approve/);
     assert.match(reviewArtifact, /reason: Looks good/);
+  });
+
+  test("queues governance approve-task instead of moving the local file when governance mode is enabled", () => {
+    const bindingDir = path.join(tmpDir, ".devory");
+    const governanceRepo = path.join(tmpDir, "governance");
+    fs.mkdirSync(path.join(governanceRepo, ".devory-governance"), { recursive: true });
+    fs.writeFileSync(
+      path.join(governanceRepo, ".devory-governance", "config.json"),
+      `${JSON.stringify({ workspace_id: "ws-1" }, null, 2)}\n`,
+      "utf-8",
+    );
+    fs.mkdirSync(bindingDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(bindingDir, "feature-flags.json"),
+      `${JSON.stringify({ governance_repo_enabled: true }, null, 2)}\n`,
+      "utf-8",
+    );
+    fs.writeFileSync(
+      path.join(bindingDir, "governance.json"),
+      `${JSON.stringify({
+        governance_repo_path: governanceRepo,
+        workspace_id: "ws-1",
+      }, null, 2)}\n`,
+      "utf-8",
+    );
+
+    const sourcePath = writeTask("review", "factory-129-governance-review.md", taskContent({
+      id: "factory-129",
+      title: "Governance review",
+      project: "ai-dev-factory",
+      status: "review",
+      agent: "backend-builder",
+    }));
+
+    const result = applyReviewAction(
+      { task: sourcePath, action: "approve", reason: "Ship it" },
+      { factoryRoot: tmpDir }
+    );
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    assert.equal(result.executionMode, "governance-queued");
+    assert.equal(fs.existsSync(sourcePath), true);
+    assert.equal(result.fromPath, sourcePath);
+    assert.equal(result.toPath, sourcePath);
+    assert.equal(result.transitionArtifactPath, null);
+    assert.ok(result.governanceCommandPath);
+    assert.equal(fs.existsSync(result.governanceCommandPath!), true);
+
+    const command = JSON.parse(fs.readFileSync(result.governanceCommandPath!, "utf-8")) as {
+      command_type: string;
+      target_task_id: string;
+      workspace_id: string;
+    };
+    assert.equal(command.command_type, "approve-task");
+    assert.equal(command.target_task_id, "factory-129");
+    assert.equal(command.workspace_id, "ws-1");
+
+    const reviewArtifacts = fs.readdirSync(path.join(tmpDir, "runs"));
+    assert.equal(reviewArtifacts.some((name) => name.endsWith("factory-129-review.md")), true);
+    assert.equal(reviewArtifacts.some((name) => name.endsWith("factory-129-move.md")), false);
   });
 
   test("rejects invalid review actions consistently", () => {

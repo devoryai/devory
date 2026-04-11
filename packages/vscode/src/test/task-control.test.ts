@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import {
   formatTaskReviewError,
   runTaskPromoteWorkflow,
+  runTaskRequeueWorkflow,
   runTaskReviewWorkflow,
 } from "../lib/task-control.js";
 
@@ -71,6 +72,59 @@ describe("runTaskReviewWorkflow", () => {
   });
 });
 
+describe("runTaskRequeueWorkflow", () => {
+  test("requeues a blocked task to ready", () => {
+    const result = runTaskRequeueWorkflow(
+      {
+        task: "tasks/blocked/factory-177.md",
+        label: "factory-177",
+        fromStage: "blocked",
+      },
+      {
+        factoryRoot: "/workspace",
+        moveTaskImpl: () => ({
+          ok: true,
+          fromPath: "/workspace/tasks/blocked/factory-177.md",
+          toPath: "/workspace/tasks/ready/factory-177.md",
+          fromStatus: "blocked",
+          toStatus: "ready",
+        }),
+      }
+    );
+
+    assert.deepEqual(result, {
+      ok: true,
+      message: "Devory: requeued factory-177 → ready.",
+    });
+  });
+
+  test("restores an archived task to backlog when requested", () => {
+    const result = runTaskRequeueWorkflow(
+      {
+        task: "tasks/archived/factory-177.md",
+        label: "factory-177",
+        fromStage: "archived",
+        toStage: "backlog",
+      },
+      {
+        factoryRoot: "/workspace",
+        moveTaskImpl: () => ({
+          ok: true,
+          fromPath: "/workspace/tasks/archived/factory-177.md",
+          toPath: "/workspace/tasks/backlog/factory-177.md",
+          fromStatus: "archived",
+          toStatus: "backlog",
+        }),
+      }
+    );
+
+    assert.deepEqual(result, {
+      ok: true,
+      message: "Devory: requeued factory-177 → backlog.",
+    });
+  });
+});
+
 describe("formatTaskReviewError", () => {
   test("includes validation details when present", () => {
     const message = formatTaskReviewError({
@@ -82,5 +136,35 @@ describe("formatTaskReviewError", () => {
     assert.match(message, /review action failed/);
     assert.match(message, /Validation failed/);
     assert.match(message, /reason is required/);
+  });
+
+  test("returns a queued approval message when governance mode defers the action", () => {
+    const result = runTaskReviewWorkflow(
+      {
+        task: "tasks/review/factory-177.md",
+        label: "factory-177",
+        action: "approve",
+      },
+      {
+        factoryRoot: "/workspace",
+        applyReviewActionImpl: () => ({
+          ok: true,
+          taskId: "factory-177",
+          fromPath: "/workspace/tasks/review/factory-177.md",
+          toPath: "/workspace/tasks/review/factory-177.md",
+          fromStatus: "review",
+          toStatus: "done",
+          executionMode: "governance-queued",
+          transitionArtifactPath: null,
+          reviewArtifactPath: "/workspace/runs/review.md",
+          governanceCommandPath: "/workspace/.devory/commands/pending/cmd.json",
+        }),
+      }
+    );
+
+    assert.deepEqual(result, {
+      ok: true,
+      message: "Devory: queued approval for factory-177.",
+    });
   });
 });

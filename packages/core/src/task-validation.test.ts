@@ -1,5 +1,8 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import {
   applyTaskDraftValidation,
   buildMinimalTaskDraftFixture,
@@ -136,5 +139,113 @@ describe("task draft validation integration", () => {
     assert.equal(rendered.valid, true);
     assert.deepEqual(rendered.errors, []);
     assert.deepEqual(rendered.warnings, []);
+  });
+
+  test("skills inline array validates when skill directory exists", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "devory-factory-248-"));
+    fs.mkdirSync(path.join(tempRoot, "skills", "database-migration"), {
+      recursive: true,
+    });
+
+    const result = validateTaskMarkdown(
+      [
+        "---",
+        "id: factory-248-valid-skill",
+        "title: Skills validation success",
+        "project: ai-dev-factory",
+        "repo: .",
+        "branch: task/factory-248-valid-skill",
+        "type: feature",
+        "priority: high",
+        "status: backlog",
+        "agent: backend-builder",
+        "skills: [database-migration]",
+        "---",
+        "",
+        "## Goal",
+        "",
+        "Validate declared skills metadata.",
+        "",
+        "## Context",
+        "",
+        "- Skills are optional metadata.",
+        "",
+        "## Acceptance Criteria",
+        "",
+        "- Validator accepts known skills.",
+        "",
+        "## Expected Artifacts",
+        "",
+        "- Task metadata validation",
+        "",
+        "## Failure Conditions",
+        "",
+        "- Validation rejects known skills",
+        "",
+        "## Reviewer Checklist",
+        "",
+        "- [ ] Validation keeps warning channel clean",
+      ].join("\n"),
+      "backlog",
+      { factoryRoot: tempRoot }
+    );
+
+    assert.equal(result.valid, true);
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.warnings, []);
+  });
+
+  test("skills warning is advisory when directory is missing", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "devory-factory-248-"));
+    fs.mkdirSync(path.join(tempRoot, "skills"), { recursive: true });
+
+    const result = validateTaskMarkdown(
+      [
+        "---",
+        "id: factory-248-missing-skill",
+        "title: Skills warning behavior",
+        "project: ai-dev-factory",
+        "repo: .",
+        "branch: task/factory-248-missing-skill",
+        "type: feature",
+        "priority: high",
+        "status: backlog",
+        "agent: backend-builder",
+        "skills: [unknown-skill]",
+        "---",
+        "",
+        "## Goal",
+        "",
+        "Warn when referenced skill is missing.",
+        "",
+        "## Context",
+        "",
+        "- Skill directories are resolved at factory root.",
+        "",
+        "## Acceptance Criteria",
+        "",
+        "- Missing skills yield warnings.",
+        "",
+        "## Expected Artifacts",
+        "",
+        "- Warning output",
+        "",
+        "## Failure Conditions",
+        "",
+        "- Missing skills are treated as hard errors",
+        "",
+        "## Reviewer Checklist",
+        "",
+        "- [ ] Warning remains non-blocking",
+      ].join("\n"),
+      "backlog",
+      { factoryRoot: tempRoot }
+    );
+
+    assert.equal(result.valid, true);
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.warnings, [
+      'Task metadata "skills" references unknown skill "unknown-skill" (expected directory: skills/unknown-skill)',
+    ]);
   });
 });

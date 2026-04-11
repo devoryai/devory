@@ -2,10 +2,12 @@
  * packages/cli/src/commands/task-move.ts
  *
  * `devory task move` — move a task through the lifecycle.
- * Delegates to `scripts/task-move.ts` via spawn.
+ * Calls moveTask() from the shared workspace API directly.
  */
 
-import { spawnSync } from "child_process";
+import path from "path";
+import { resolveFactoryRoot } from "../lib/factory-root.ts";
+import { moveTask } from "../lib/workspace.ts";
 import { buildTsxInvocation } from "../lib/tsx.ts";
 
 export const NAME = "task move";
@@ -40,12 +42,38 @@ export function parseArgs(
   return { args: { task, to }, error: null };
 }
 
+/**
+ * Build the tsx invocation for this command.
+ * Kept for backward compatibility — new callers should use moveTask() directly.
+ */
 export function buildInvocation(args: TaskMoveArgs): string[] {
   return buildTsxInvocation("scripts/task-move.ts", ["--task", args.task, "--to", args.to]);
 }
 
+/** Execute the command via the shared workspace API, returning the process exit code. */
 export function run(args: TaskMoveArgs): number {
-  const [cmd, ...rest] = buildInvocation(args);
-  const result = spawnSync(cmd, rest, { stdio: "inherit" });
-  return result.status ?? 1;
+  const { root: factoryRoot } = resolveFactoryRoot();
+  const result = moveTask(args, { factoryRoot });
+
+  const SEP = "=".repeat(56);
+  console.log(`\n${SEP}`);
+  console.log("  TASK-MOVE");
+  console.log(`  File: ${args.task}`);
+  console.log(`  To:   ${args.to}`);
+  console.log(SEP);
+
+  if (!result.ok) {
+    console.error(`\n[task-move] ${result.error}`);
+    if (result.validationErrors?.length) {
+      result.validationErrors.forEach((e) => console.error(`  - ${e}`));
+    }
+    console.error(`\n${SEP}\n`);
+    return 1;
+  }
+
+  const relFrom = path.relative(factoryRoot, result.fromPath);
+  const relTo = path.relative(factoryRoot, result.toPath);
+  console.log(`\n[task-move] Moved: ${relFrom} → ${relTo}`);
+  console.log(`\n${SEP}\n`);
+  return 0;
 }

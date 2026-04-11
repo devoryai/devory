@@ -38,8 +38,23 @@ export const COMMANDS: CommandSpec[] = [
       "devory task validate [--file <file>] [--folder <folder>] [--root <dir>] [--status <status>] [--strict]",
   },
   {
+    name: "skill new",
+    description: "Scaffold a new skill from templates/skill-template.md",
+    usage: "devory skill new <name> [--root <dir>]",
+  },
+  {
+    name: "skill list",
+    description: "List available skills (one per line)",
+    usage: "devory skill list [--root <dir>]",
+  },
+  {
+    name: "skill validate",
+    description: "Validate SKILL.md structure for one skill or all skills",
+    usage: "devory skill validate <name> [--root <dir>] | devory skill validate --all [--root <dir>]",
+  },
+  {
     name: "run",
-    description: "Run the factory orchestrator",
+    description: "Run one orchestrator pass (does not poll governance commands)",
     usage:
       "devory run [--limit <n>] [--resume] [--dry-run] [--validate]",
   },
@@ -50,7 +65,7 @@ export const COMMANDS: CommandSpec[] = [
   },
   {
     name: "worker",
-    description: "Start the factory worker loop",
+    description: "Start the factory worker loop (polls governance commands)",
     usage: "devory worker",
   },
   {
@@ -87,5 +102,45 @@ export const COMMANDS: CommandSpec[] = [
     name: "improve",
     description: "Compute one live improvement signal and persist its artifact",
     usage: "devory improve --type <drift|compliance|refactor|doctrine>",
+  },
+  {
+    name: "diagnostics",
+    description: "Check self-hosted prerequisites (workspace, license, engine, Ollama)",
+    usage: "devory diagnostics [--root <dir>]",
+  },
+  {
+    name: "doctor",
+    description: "Check local factory health (workspace, tasks, standards, license, config)",
+    usage: "devory doctor [--root <dir>]",
+  },
+  {
+    name: "governance init",
+    description: "Initialize a new Devory governance repo with Git and directory structure",
+    usage: "devory governance init [--dir <path>] [--workspace-id <id>] [--force] [--dry-run]",
+  },
+  {
+    name: "governance bind",
+    description: "Bind a working repo to an existing governance repo",
+    usage: "devory governance bind --governance-repo <path> [--workspace-id <id>]",
+  },
+  {
+    name: "governance status",
+    description: "Show governance repo binding status for the current working repo",
+    usage: "devory governance status",
+  },
+  {
+    name: "governance doctor",
+    description: "Diagnose governance mode configuration: flag, binding, repo health, and runtime mode",
+    usage: "devory governance doctor [--working-repo <path>]",
+  },
+  {
+    name: "governance enqueue-local",
+    description: "Write a governance command into the local file queue fallback for runtime testing",
+    usage: "devory governance enqueue-local --type <command-type> [--payload <json> | --payload-file <path>] [--target-task-id <id>] [--target-run-id <id>] [--issued-by <user>] [--expires-in-minutes <n>] [--working-repo <path>]",
+  },
+  {
+    name: "migrate",
+    description: "Copy existing local artifacts into the bound governance repo",
+    usage: "devory migrate --to-governance-repo [--dry-run] [--confirm]",
   },
 ];

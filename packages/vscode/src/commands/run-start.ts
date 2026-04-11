@@ -39,13 +39,19 @@ export async function runStartCommand(
   runOutput.appendLine(`[Devory] Starting factory run${limit !== undefined ? ` (limit: ${limit})` : ""}…`);
   runOutput.show(true);
 
-  const result = await startFactoryRun(factoryRoot, runtimeRoot, { limit }, undefined, (chunk) =>
-    runOutput.append(chunk)
-  );
+  try {
+    const result = await startFactoryRun(factoryRoot, runtimeRoot, { limit }, undefined, (chunk) =>
+      runOutput.append(chunk)
+    );
 
-  if (!result.ok) {
-    vscode.window.showErrorMessage(result.message);
-  } else {
-    vscode.window.showInformationMessage(result.message);
+    if (!result.ok) {
+      vscode.window.showErrorMessage(result.message);
+    } else {
+      vscode.window.showInformationMessage(result.message);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    runOutput.appendLine(`[Devory] Run failed unexpectedly: ${message}`);
+    vscode.window.showErrorMessage(`Devory: factory run failed before startup: ${message}`);
   }
 }
