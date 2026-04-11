@@ -2,7 +2,8 @@
 
 The Devory CLI is the repo-first command surface for Devory.
 
-Use it to initialize a workspace, create and move tasks, run Devory, inspect configuration, and manage licenses.
+Use it to initialize a workspace, manage tasks and skills, run Devory, inspect
+configuration, operate governance mode, and prepare GitHub handoff artifacts.
 
 ## Install Or Run
 
@@ -35,9 +36,34 @@ npx @devory/cli init
 | `devory task new` | Create a backlog task |
 | `devory task move` | Move a task between lifecycle stages |
 | `devory task validate` | Validate task structure and required sections |
+| `devory skill new` | Scaffold a new skill directory and `SKILL.md` |
+| `devory skill list` | List discovered skills |
+| `devory skill validate` | Validate one skill or all skills |
 | `devory run` | Execute Devory against ready work |
+| `devory worker` | Run the long-lived worker loop for governance command polling |
+| `devory artifacts` | Build or inspect the artifact index |
 | `devory config` | Show resolved workspace and tier information |
-| `devory license` | Activate or inspect a paid license |
+| `devory license activate` | Write a workspace license token |
+| `devory license clear` | Remove the local workspace license file and cache |
+| `devory license status` | Show resolved tier, key source, and fallback reason |
+| `devory pr-prep` | Generate branch, commit, and PR description material from a task |
+| `devory pr-create` | Create a GitHub PR with explicit confirmation and token requirements |
+| `devory improve` | Persist a live improvement signal artifact |
+| `devory diagnostics` | Check self-hosted prerequisites such as workspace, license, and engine availability |
+| `devory doctor` | Run the first-line local health check |
+| `devory governance init` | Initialize a governance repository |
+| `devory governance bind` | Bind a working repo to a governance repo |
+| `devory governance status` | Show current governance binding status |
+| `devory governance doctor` | Diagnose governance readiness and command transport state |
+| `devory governance enqueue-local` | Queue a governance command into the local file fallback |
+| `devory migrate` | Copy supported local Devory assets into the bound governance repo |
+
+## Notes
+
+- `devory run` is a one-shot orchestrator pass.
+- `devory worker` is the runtime that polls and applies governance commands.
+- The public CLI package does not currently expose the private cloud/session
+  command family.
 
 ## Plans
 

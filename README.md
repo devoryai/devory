@@ -1,6 +1,7 @@
 # Devory Public Packages
 
-This repository contains the public tooling layer for Devory: the CLI, VS Code extension, shared core utilities, and GitHub helpers.
+This repository contains the public tooling layer for Devory: the CLI, VS Code
+extension, shared core utilities, and GitHub helpers.
 
 Devory is an AI-assisted engineering system, not just a code generator. These packages help you run that workflow locally, inside your repository, with tasks, doctrine, artifacts, and review controls.
 
@@ -28,6 +29,23 @@ From there:
 2. Move it to `ready`.
 3. Run Devory.
 4. Review the result and artifacts.
+
+## Current Public Command Surfaces
+
+The public repository currently exposes:
+
+- CLI workspace commands: `init`, `task`, `skill`, `run`, `worker`,
+  `artifacts`, `config`, `license`, `doctor`, `diagnostics`
+- CLI governance commands: `governance init`, `governance bind`,
+  `governance status`, `governance doctor`, `governance enqueue-local`,
+  `migrate`
+- CLI GitHub handoff commands: `pr-prep`, `pr-create`
+- VS Code commands for task lifecycle, task enrichment, review actions, run
+  start/resume, artifact inspection, governance status, and local data
+  transparency
+
+This public repo does not currently expose the private cloud/session command
+family.
 
 ## Plans
 
