@@ -6,12 +6,14 @@
  */
 
 import * as vscode from "vscode";
-import { startFactoryRun } from "../lib/run-adapter.js";
+import type { ManagedRunState, RunController } from "../lib/run-controller.js";
 
 export async function runStartCommand(
   factoryRoot: string,
   runtimeRoot: string,
-  runOutput: vscode.OutputChannel
+  runOutput: vscode.OutputChannel,
+  controller: RunController,
+  onStateChange: (state: ManagedRunState) => void,
 ): Promise<void> {
   if (!factoryRoot) {
     vscode.window.showErrorMessage(
@@ -39,19 +41,33 @@ export async function runStartCommand(
   runOutput.appendLine(`[Devory] Starting factory run${limit !== undefined ? ` (limit: ${limit})` : ""}…`);
   runOutput.show(true);
 
-  try {
-    const result = await startFactoryRun(factoryRoot, runtimeRoot, { limit }, undefined, (chunk) =>
-      runOutput.append(chunk)
-    );
+  const started = await controller.start(factoryRoot, runtimeRoot, { limit }, {
+    onOutput: (chunk) => runOutput.append(chunk),
+    onStateChange,
+    onExit: (result) => {
+      if (controller.getState() === "paused") {
+        vscode.window.showInformationMessage(
+          "Devory: factory run paused at a safe checkpoint. Use Play to resume.",
+        );
+        return;
+      }
+      const noOutput = result.stdout.length === 0 && result.stderr.length === 0;
+      if (result.exitCode !== 0) {
+        vscode.window.showErrorMessage(
+          `Devory: factory run failed (exit ${result.exitCode})\n${result.stderr || result.stdout}`,
+        );
+        return;
+      }
+      if (noOutput) {
+        runOutput.append("[Devory] No output received — no ready tasks detected.\n");
+      }
+      vscode.window.showInformationMessage(
+        "Devory: factory run completed. Use Devory: Inspect Recent Runs to review the result.",
+      );
+    },
+  });
 
-    if (!result.ok) {
-      vscode.window.showErrorMessage(result.message);
-    } else {
-      vscode.window.showInformationMessage(result.message);
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    runOutput.appendLine(`[Devory] Run failed unexpectedly: ${message}`);
-    vscode.window.showErrorMessage(`Devory: factory run failed before startup: ${message}`);
+  if (!started.started) {
+    vscode.window.showInformationMessage(`Devory: ${started.reason}`);
   }
 }

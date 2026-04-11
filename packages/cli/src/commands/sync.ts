@@ -7,11 +7,10 @@
  * License: requires Pro or Teams tier (Core exits 1)
  */
 
-import * as fs from "fs";
-import * as path from "path";
 import * as readline from "readline/promises";
 import { createClient } from "@supabase/supabase-js";
 import { detectTier, resolveFactoryRoot } from "@devory/core";
+import { readSession, type DevorySession } from "../lib/cloud-session.ts";
 import {
   buildManifest,
   executePush,
@@ -56,33 +55,13 @@ export function parseArgs(argv: string[]): { args?: SyncArgs; error: string | nu
   };
 }
 
-// ---------------------------------------------------------------------------
-// Session / auth helpers
-// ---------------------------------------------------------------------------
-
-interface DevorySession {
-  access_token: string;
-  refresh_token?: string;
-  workspace_id?: string;
-}
-
-function readSession(factoryRoot: string): DevorySession | null {
-  const sessionPath = path.join(factoryRoot, ".devory", "session.json");
-  if (!fs.existsSync(sessionPath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(sessionPath, "utf-8")) as DevorySession;
-  } catch {
-    return null;
-  }
-}
-
 function buildSupabaseClient(session: DevorySession) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "";
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
 
   if (!url || !key) {
     throw new Error(
-      "Supabase URL and anon key are required. Set SUPABASE_URL and SUPABASE_ANON_KEY.",
+      "Cloud backend URL and client key are required. Set the workspace cloud environment variables before using sync.",
     );
   }
 
@@ -159,7 +138,7 @@ export async function run(args: SyncArgs): Promise<number> {
   // Auth check
   const session = readSession(root);
   if (!session) {
-    console.error("Sign in at devory.ai to enable cloud sync");
+    console.error("Cloud sync is not connected. Run `devory cloud login` and `devory cloud link --workspace-id <id>` first.");
     return 1;
   }
 

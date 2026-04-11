@@ -83,6 +83,13 @@ describe("LIFECYCLE_STAGES", () => {
     assert.ok(LIFECYCLE_STAGES.includes("archived"));
     assert.ok(LIFECYCLE_STAGES.includes("done"));
   });
+
+  test("places archived after done in the explorer order", () => {
+    const doneIndex = LIFECYCLE_STAGES.indexOf("done");
+    const archivedIndex = LIFECYCLE_STAGES.indexOf("archived");
+    assert.ok(doneIndex >= 0);
+    assert.ok(archivedIndex > doneIndex);
+  });
 });
 
 // ── listTasksInStage ───────────────────────────────────────────────────────

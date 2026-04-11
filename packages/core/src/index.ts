@@ -120,6 +120,18 @@ export {
   resolveFactoryRoot,
 } from "./factory-environment.ts";
 export {
+  clearLocalRunControl,
+  LOCAL_RUN_CONTROL_FILE,
+  readLocalRunControl,
+  resolveLocalRunControlPath,
+  updateLocalRunControl,
+  writeLocalRunControl,
+} from "./local-run-control.ts";
+export type {
+  LocalRunControlAction,
+  LocalRunControlState,
+} from "./local-run-control.ts";
+export {
   applyTaskRoutingOutcomeEvaluation,
   normalizeRunRecord,
   normalizeTaskRecord,

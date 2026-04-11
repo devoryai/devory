@@ -113,7 +113,7 @@ export class TaskTreeProvider
       // Stage level: tasks within this stage
       const tasks = listTasksInStage(this.tasksDir, element.stage);
       if (tasks.length === 0 && element.stage === "backlog") {
-        return Promise.resolve([new PlaceholderItem("Create your first task →", "devory.taskCreate")]);
+        return Promise.resolve([new PlaceholderItem("Create Task →", "devory.taskCreate")]);
       }
       return Promise.resolve(tasks.map((t) => new TaskItem(t)));
     }

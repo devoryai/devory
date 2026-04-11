@@ -41,8 +41,28 @@ describe("VS Code contribution placement", () => {
   test("contributes governance status command", () => {
     const commands = contributedCommands();
     assert.ok(commands.includes("devory.showGovernanceStatus"));
+    assert.ok(commands.includes("devory.cloudConnect"));
     assert.ok(commands.includes("devory.showStoredDataLocations"));
     assert.ok(commands.includes("devory.sweepWorkshop"));
+  });
+
+  test("places cloud connect alongside other factory controls", () => {
+    const commands = commandsFor("view/title");
+    assert.ok(commands.includes("devory.cloudConnect"));
+    assert.match(whenFor("view/title", "devory.cloudConnect"), /view == devoryFactoryExplorer/);
+    assert.equal(commands.includes("devory.doctrineCreate"), false);
+    assert.equal(commands.includes("devory.skillCreate"), false);
+    assert.equal(commands.includes("devory.agentCreate"), false);
+  });
+
+  test("keeps run resume out of the task explorer title controls", () => {
+    const commands = commandsFor("view/title");
+    assert.ok(commands.includes("devory.runStart"));
+    assert.ok(commands.includes("devory.runPause"));
+    assert.ok(commands.includes("devory.runStop"));
+    assert.equal(commands.includes("devory.runResume"), false);
+    assert.match(whenFor("view/title", "devory.runPause"), /devory\.runActive/);
+    assert.match(whenFor("view/title", "devory.runStop"), /devory\.runActive/);
   });
 
   test("places primary control actions in the task explorer context menu", () => {

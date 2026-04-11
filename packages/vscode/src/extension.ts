@@ -25,9 +25,12 @@ import { taskReviewActionCommand } from "./commands/task-review-action.js";
 import { taskRequeueCommand } from "./commands/task-requeue.js";
 import { runStartCommand } from "./commands/run-start.js";
 import { runResumeCommand } from "./commands/run-resume.js";
+import { runPauseCommand } from "./commands/run-pause.js";
+import { runStopCommand } from "./commands/run-stop.js";
 import { runInspectCommand } from "./commands/run-inspect.js";
 import { artifactInspectCommand } from "./commands/artifact-inspect.js";
 import { factoryDoctorCommand } from "./commands/factory-doctor.js";
+import { cloudConnectCommand } from "./commands/cloud-connect.js";
 import { initWorkspaceCommand } from "./commands/init-workspace.js";
 import { doctrineCreateCommand } from "./commands/doctrine-create.js";
 import { skillCreateCommand } from "./commands/skill-create.js";
@@ -52,6 +55,7 @@ import {
   cleanupLocalDataCommand,
   sweepWorkshopCommand,
 } from "./commands/cleanup.js";
+import { RunController, type ManagedRunState } from "./lib/run-controller.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const factoryRoot = getFactoryRoot();
@@ -59,10 +63,20 @@ export function activate(context: vscode.ExtensionContext): void {
   const governanceOutput = vscode.window.createOutputChannel("Devory: Governance");
   const runOutput = vscode.window.createOutputChannel("Devory: Run");
   const doctorOutput = vscode.window.createOutputChannel("Devory: Doctor");
+  const cloudOutput = vscode.window.createOutputChannel("Devory: Cloud");
   const initOutput = vscode.window.createOutputChannel("Devory: Init");
   const storageOutput = vscode.window.createOutputChannel("Devory: Storage");
+  const runController = new RunController();
 
-  context.subscriptions.push(governanceOutput, runOutput, doctorOutput, initOutput, storageOutput);
+  context.subscriptions.push(governanceOutput, runOutput, doctorOutput, cloudOutput, initOutput, storageOutput);
+
+  const syncRunContext = (state: ManagedRunState) => {
+    void vscode.commands.executeCommand("setContext", "devory.runActive", state === "running");
+    void vscode.commands.executeCommand("setContext", "devory.runPaused", state === "paused");
+    void vscode.commands.executeCommand("setContext", "devory.runRunning", state === "running");
+  };
+
+  syncRunContext(runController.getState());
 
   // ── Task Tree View ────────────────────────────────────────────────────────
   const treeProvider = new TaskTreeProvider(resolveTasksDir(factoryRoot));
@@ -161,6 +175,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
       await vscode.window.showInformationMessage(`${headline}${detail}`);
       refreshGovernanceStatus();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.cloudConnect", async () => {
+      await cloudConnectCommand(getFactoryRoot(), cloudOutput);
     })
   );
 
@@ -353,7 +373,26 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      runStartCommand(root, runtimeRoot, runOutput);
+      if (runController.getState() === "paused") {
+        void runController
+          .resume({
+            onOutput: (chunk) => runOutput.append(chunk),
+            onStateChange: syncRunContext,
+          })
+          .then((resumed) => {
+            if (!resumed.ok) {
+              vscode.window.showInformationMessage(`Devory: ${resumed.reason}`);
+              return;
+            }
+            vscode.window.showInformationMessage("Devory: resumed the paused factory run.");
+          });
+        return;
+      }
+      if (runController.getState() === "running") {
+        vscode.window.showInformationMessage("Devory: a factory run is already active. Use pause or stop from the Tasks header.");
+        return;
+      }
+      void runStartCommand(root, runtimeRoot, runOutput, runController, syncRunContext);
     })
   );
 
@@ -368,6 +407,18 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       const { runsDir } = getFactoryPaths(root);
       runResumeCommand(root, runsDir, runtimeRoot, runOutput);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.runPause", () => {
+      void runPauseCommand(runController, runOutput);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.runStop", () => {
+      void runStopCommand(runController, runOutput);
     })
   );
 

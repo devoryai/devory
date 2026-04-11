@@ -12,7 +12,7 @@ import {
   TASK_DRAFT_RENDER_CONTRACT_VERSION,
   TASK_DRAFT_REQUIRED_FRONTMATTER_FIELDS,
 } from "./task-draft.ts";
-import { validateTask, validateTaskBody } from "./task-validation.ts";
+import { validateTask, validateTaskBody } from "../../../workers/lib/task-utils.ts";
 
 describe("task draft render contract", () => {
   test("minimal task draft renders to valid markdown", () => {

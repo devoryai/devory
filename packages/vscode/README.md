@@ -43,9 +43,12 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 | `Devory: Add Files Likely Affected` | Insert that section only if absent |
 | `Devory: Start Factory Run` | Execute Devory from the bundled runtime |
 | `Devory: Resume Factory Run` | Resume a failed or paused run |
+| `Devory: Pause or Resume Factory Run` | Request a pause, or resume from the same control point |
+| `Devory: Stop Factory Run` | Request an orderly stop for the active run |
 | `Devory: Inspect Recent Runs` | Open recent run records from the editor |
 | `Devory: Inspect Artifacts` | Browse saved execution outputs |
 | `Devory: Factory Doctor` | Check workspace and CLI/runtime readiness |
+| `Devory: Connect Cloud Account` | Start the local cloud-account connection flow |
 | `Devory: Create Doctrine File` | Create a new doctrine file |
 | `Devory: Create Skill` | Scaffold a reusable skill |
 | `Devory: Create Agent` | Scaffold a new agent definition |
@@ -60,6 +63,7 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 
 - `Devory: Start Factory Run` uses the packaged local runtime.
 - `Devory: Resume Factory Run` resumes an existing failed or paused run record.
+- `Devory: Pause or Resume Factory Run` and `Devory: Stop Factory Run` write local run-control signals that the active runtime checks between steps.
 - The extension exposes review and lifecycle commands directly, but those
   commands still operate against the repository state on disk.
 

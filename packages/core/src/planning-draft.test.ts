@@ -13,7 +13,7 @@ import {
   serializePlanningDraft,
   updateEpicPlanningDraft,
 } from "./planning-draft.ts";
-import { validateTask, validateTaskBody } from "./task-validation.ts";
+import { validateTask, validateTaskBody } from "../../../workers/lib/task-utils.ts";
 
 describe("planning draft contract", () => {
   test("builds and normalizes an epic planning draft fixture", () => {

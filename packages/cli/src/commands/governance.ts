@@ -13,13 +13,16 @@ import * as path from "path";
 import { randomUUID } from "crypto";
 import { execSync, execFileSync } from "child_process";
 import type {
+  ActiveDevoryState,
   GovernanceCommandEnvelope,
   GovernanceRepoBinding,
   GovernanceRepoConfig,
 } from "@devory/core";
 import {
+  buildDefaultActiveState,
   evaluateGovernanceCommandTransport,
   loadFeatureFlags,
+  normalizeActiveDevoryState,
   validateGovernanceCommandEnvelope,
 } from "@devory/core";
 
@@ -57,6 +60,20 @@ function ensureLocalCommandQueue(workingRepoPath: string): void {
 
 function buildLocalCommandId(): string {
   return `local-${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
+}
+
+function readActiveState(workingRepoPath: string): ActiveDevoryState {
+  const filePath = path.join(workingRepoPath, ".devory", "active-state.json");
+  if (!fs.existsSync(filePath)) {
+    return buildDefaultActiveState();
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf-8")) as unknown;
+    return normalizeActiveDevoryState(parsed) ?? buildDefaultActiveState();
+  } catch {
+    return buildDefaultActiveState();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -370,7 +387,7 @@ export function evaluateCloudCommandReadiness(
 
 export function formatCloudCommandReadinessLine(readiness: CloudCommandReadiness): string {
   if (readiness.mode === "supabase") {
-    return "Cloud commands: READY (Supabase)";
+    return "Cloud commands: READY (managed cloud backend)";
   }
   if (readiness.mode === "local-fallback") {
     return "Cloud commands: LOCAL FALLBACK (.devory/commands)";
@@ -447,7 +464,7 @@ export function runDoctor(args: GovernanceDoctorArgs): number {
   if (hasBinding) {
     try {
       binding = JSON.parse(fs.readFileSync(bindingPath, "utf-8")) as GovernanceRepoBinding;
-      console.log(`  ${ok} Found — workspace_id: ${binding.workspace_id}`);
+      console.log(`  ${ok} Found — governance workspace ID: ${binding.workspace_id}`);
       console.log(`  Bound at: ${binding.bound_at}`);
     } catch {
       console.log(`  ${err} Could not parse binding file`);
@@ -512,12 +529,15 @@ export function runDoctor(args: GovernanceDoctorArgs): number {
 
   const runtimeReady = flagEnabled && hasBinding && govRepoOk;
   const cloudReadiness = evaluateCloudCommandReadiness(process.env, runtimeReady);
+  const activeState = readActiveState(args.workingRepoPath);
   console.log(`\n${runtimeReady ? ok : warn} Runtime mode`);
 
   if (runtimeReady) {
     console.log(`  Task discovery:    governance repo  (tasks/ in ${binding!.governance_repo_path})`);
     console.log(`  Task lifecycle:    TaskStore.moveTask() → Git commits`);
     console.log(`  Run lineage:       commits to ${binding!.governance_repo_path}/runs/`);
+    console.log(`  Active workspace:  ${activeState.workspace_id} (local app workspace selection)`);
+    console.log(`  Cloud workspace:   ${activeState.cloud_workspace_id ?? binding!.workspace_id} (workspace identity for cloud-backed features)`);
     console.log(`  Orchestrator log:  [orchestrator] governance mode: ON — task moves will be committed to ...`);
   } else {
     const missing: string[] = [];
@@ -536,13 +556,14 @@ export function runDoctor(args: GovernanceDoctorArgs): number {
   console.log(`\n${cloudReadiness.mode === "not-ready" ? warn : ok} Cloud command polling`);
   console.log(`  Polling runtime: devory worker (factory-worker loop)`);
   console.log(`  ${formatCloudCommandReadinessLine(cloudReadiness)}`);
-  console.log(`  Runtime transport: ${cloudReadiness.mode === "supabase" ? "Supabase" : cloudReadiness.mode === "local-fallback" ? "local file queue" : "unavailable"}`);
+  console.log(`  Runtime transport: ${cloudReadiness.mode === "supabase" ? "managed cloud backend" : cloudReadiness.mode === "local-fallback" ? "local file queue" : "unavailable"}`);
   console.log(`  Local queue path: ${path.join(args.workingRepoPath, ".devory", "commands")}`);
-  console.log(`  Supabase URL: ${cloudReadiness.supabaseUrl === "" ? "not set" : cloudReadiness.supabaseUrl}`);
-  console.log(`  Supabase URL syntax: ${cloudReadiness.supabaseUrl === "" ? "NOT SET" : cloudReadiness.supabaseUrlValid ? "VALID" : "INVALID"}`);
-  console.log(`  Service role key: ${cloudReadiness.serviceRoleKeyPresent ? "PRESENT" : "MISSING"}`);
+  console.log(`  Cloud backend URL: ${cloudReadiness.supabaseUrl === "" ? "not set" : cloudReadiness.supabaseUrl}`);
+  console.log(`  Cloud backend URL syntax: ${cloudReadiness.supabaseUrl === "" ? "NOT SET" : cloudReadiness.supabaseUrlValid ? "VALID" : "INVALID"}`);
+  console.log(`  Runtime access key: ${cloudReadiness.serviceRoleKeyPresent ? "PRESENT" : "MISSING"}`);
   if (runtimeReady && cloudReadiness.mode === "local-fallback") {
-    console.log(`  Note: governance repo mode is active; commands will be polled from the local queue until Supabase runtime credentials are configured.`);
+    console.log(`  Note: governance repo mode is active; commands will be polled from the local queue until cloud runtime credentials are configured.`);
+    console.log(`  Note: local/Core usage does not require sign-in or cloud setup to get started.`);
   }
 
   // ── Summary ───────────────────────────────────────────────────────────

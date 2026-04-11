@@ -6,6 +6,7 @@ import * as path from "path";
 
 import {
   factoryPaths,
+  findFactoryCandidateDir,
   findFactoryContextDir,
   resolveFactoryEnvironment,
   resolveFactoryMode,
@@ -48,6 +49,32 @@ describe("findFactoryContextDir", () => {
   });
 });
 
+describe("findFactoryCandidateDir", () => {
+  test("walks up to a Devory monorepo root from nested apps directories", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "package.json"),
+      JSON.stringify({ name: "ai-dev-factory", workspaces: ["apps/*", "packages/*"] }),
+    );
+    const nested = path.join(tmpDir, "apps", "devory");
+    fs.mkdirSync(nested, { recursive: true });
+
+    assert.equal(findFactoryCandidateDir(nested), tmpDir);
+  });
+
+  test("recognizes a factory root from .devory config files when FACTORY_CONTEXT is absent", () => {
+    fs.mkdirSync(path.join(tmpDir, ".devory"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, "tasks"), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpDir, ".devory", "feature-flags.json"),
+      '{"governance_repo_enabled": true}\n',
+    );
+    const nested = path.join(tmpDir, "apps");
+    fs.mkdirSync(nested, { recursive: true });
+
+    assert.equal(findFactoryCandidateDir(nested), tmpDir);
+  });
+});
+
 describe("resolveFactoryRoot", () => {
   test("uses DEVORY_FACTORY_ROOT first", () => {
     process.env.DEVORY_FACTORY_ROOT = "/explicit/path";
@@ -62,6 +89,25 @@ describe("resolveFactoryRoot", () => {
     fs.writeFileSync(path.join(tmpDir, "FACTORY_CONTEXT.md"), "# context");
     const nested = path.join(tmpDir, "deep");
     fs.mkdirSync(nested);
+    assert.deepEqual(resolveFactoryRoot(nested), {
+      root: tmpDir,
+      source: "git-walk",
+    });
+  });
+
+  test("falls back to factory structure when nested under apps without direct marker access", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "package.json"),
+      JSON.stringify({ name: "ai-dev-factory", workspaces: ["apps/*", "packages/*"] }),
+    );
+    fs.mkdirSync(path.join(tmpDir, ".devory"), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpDir, ".devory", "governance.json"),
+      '{"governance_repo_path":"/tmp/gov"}\n',
+    );
+    const nested = path.join(tmpDir, "apps", "devory");
+    fs.mkdirSync(nested, { recursive: true });
+
     assert.deepEqual(resolveFactoryRoot(nested), {
       root: tmpDir,
       source: "git-walk",

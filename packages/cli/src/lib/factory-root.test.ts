@@ -96,6 +96,24 @@ describe("resolveFactoryRoot", () => {
     assert.equal(result.source, "git-walk");
   });
 
+  test("walks up from nested apps directories using Devory repo structure", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "package.json"),
+      JSON.stringify({ name: "ai-dev-factory", workspaces: ["apps/*", "packages/*"] }),
+    );
+    fs.mkdirSync(path.join(tmpDir, ".devory"), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpDir, ".devory", "feature-flags.json"),
+      '{"governance_repo_enabled": true}\n',
+    );
+    const subDir = path.join(tmpDir, "apps", "devory");
+    fs.mkdirSync(subDir, { recursive: true });
+
+    const result = resolveFactoryRoot(subDir);
+    assert.equal(result.root, tmpDir);
+    assert.equal(result.source, "git-walk");
+  });
+
   test("falls back to cwd when no marker and no env vars", () => {
     const subDir = path.join(tmpDir, "no-marker");
     fs.mkdirSync(subDir);

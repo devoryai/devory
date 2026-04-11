@@ -16,6 +16,11 @@ export interface CommandSpec {
 
 export const COMMANDS: CommandSpec[] = [
   {
+    name: "setup",
+    description: "Guided one-command onboarding: configure governance mode end-to-end",
+    usage: "devory setup [--governance-repo <path>] [--workspace-id <id>] [--enable-governance] [--migrate-tasks]",
+  },
+  {
     name: "init",
     description: "Scaffold a new Devory workspace in the current directory",
     usage: "devory init [--dir <path>] [--force]",
@@ -87,6 +92,26 @@ export const COMMANDS: CommandSpec[] = [
     name: "license status",
     description: "Show current tier, key source, cache usage, and Core fallback reason",
     usage: "devory license status [--root <dir>]",
+  },
+  {
+    name: "cloud status",
+    description: "Show local cloud account/session status and workspace linkage",
+    usage: "devory cloud status [--root <dir>]",
+  },
+  {
+    name: "cloud login",
+    description: "Import a Devory cloud session for this local workspace",
+    usage: "devory cloud login [--root <dir>] [--session-file <file> | --session-json <json> | --access-token <token> --refresh-token <token>] [--workspace-id <id>]",
+  },
+  {
+    name: "cloud link",
+    description: "Link the current local workspace to a cloud workspace ID",
+    usage: "devory cloud link --workspace-id <id> [--root <dir>]",
+  },
+  {
+    name: "cloud logout",
+    description: "Remove the local cloud session without affecting offline license activation",
+    usage: "devory cloud logout [--root <dir>]",
   },
   {
     name: "pr-prep",

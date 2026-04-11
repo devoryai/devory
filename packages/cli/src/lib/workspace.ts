@@ -24,13 +24,21 @@ import {
   TASK_REVIEW_ACTION_STAGE_MAP,
   loadFeatureFlags,
   parseFrontmatter,
-  validateTask,
   validateGovernanceCommandEnvelope,
   type GovernanceCommandEnvelope,
   type GovernanceRepoBinding,
   type TaskMeta,
 } from "@devory/core";
- 
+import {
+  checkTransition as checkWorkflowTransition,
+  LIFECYCLE_DIR_MAP as WORKFLOW_LIFECYCLE_DIR_MAP,
+  LIFECYCLE_STAGES as WORKFLOW_LIFECYCLE_STAGES,
+  renderTransitionLog,
+  type LifecycleStage as WorkflowLifecycleStage,
+} from "../../../../workers/lib/workflow-helpers.ts";
+import { rewriteStatus, validateTask } from "../../../../workers/lib/task-utils.ts";
+
+export { rewriteStatus };
 
 /**
  * Inject `agent: <value>` into the YAML frontmatter block of a task file's
@@ -71,92 +79,11 @@ export function insertAgentIntoFrontmatter(content: string, agent: string): stri
 // (Kept here so this module is self-contained and editor-agnostic)
 // ---------------------------------------------------------------------------
 
-export const LIFECYCLE_STAGES = [
-  "backlog",
-  "ready",
-  "doing",
-  "review",
-  "blocked",
-  "archived",
-  "done",
-] as const;
+export const LIFECYCLE_STAGES = WORKFLOW_LIFECYCLE_STAGES;
 
 export type LifecycleStage = (typeof LIFECYCLE_STAGES)[number];
 
-/** Maps each lifecycle stage to the tasks/ subdirectory that holds it. */
-export const LIFECYCLE_DIR_MAP: Record<LifecycleStage, string> = {
-  backlog: "tasks/backlog",
-  ready: "tasks/ready",
-  doing: "tasks/doing",
-  review: "tasks/review",
-  blocked: "tasks/blocked",
-  archived: "tasks/archived",
-  done: "tasks/done",
-};
-
-/** Patch only the `status:` line inside the YAML frontmatter block. */
-export function rewriteStatus(content: string, newStatus: string): string {
-  const fmMatch = content.match(/^(---\n[\s\S]*?\n---\n)/);
-  if (!fmMatch) return content;
-  const updatedFm = fmMatch[1].replace(/^(status:\s*).*$/m, `$1${newStatus}`);
-  return content.replace(fmMatch[1], updatedFm);
-}
-
-interface TransitionLogOpts {
-  taskId: string;
-  filename: string;
-  fromStatus: LifecycleStage;
-  toStatus: LifecycleStage;
-  timestamp: string;
-  validationErrors: string[];
-}
-
-function renderTransitionLog(opts: TransitionLogOpts): string {
-  const { taskId, filename, fromStatus, toStatus, timestamp, validationErrors } = opts;
-  const success = validationErrors.length === 0;
-  const resultLabel = success ? "moved" : "validation-failed";
-
-  const lines: string[] = [
-    "---",
-    `task_id: ${taskId}`,
-    `source_file: ${filename}`,
-    `timestamp: ${timestamp}`,
-    `from_status: ${fromStatus}`,
-    `to_status: ${toStatus}`,
-    `result: ${resultLabel}`,
-    "---",
-    "",
-    `# Transition Log — ${taskId}`,
-    "",
-    `| Field | Value |`,
-    `|---|---|`,
-    `| Task ID | ${taskId} |`,
-    `| Timestamp | ${timestamp} |`,
-    `| From | \`${fromStatus}\` |`,
-    `| To | \`${toStatus}\` |`,
-    `| Result | ${resultLabel} |`,
-    "",
-  ];
-
-  if (!success) {
-    lines.push(
-      "## Validation Errors",
-      "",
-      "Task was **not** moved. Fix the errors below and retry.",
-      "",
-      ...validationErrors.map((e) => `- ${e}`)
-    );
-  } else {
-    lines.push(
-      "## Transition Complete",
-      "",
-      `Task \`${taskId}\` moved from \`${fromStatus}\` to \`${toStatus}\`.`,
-      ""
-    );
-  }
-
-  return lines.join("\n") + "\n";
-}
+export const LIFECYCLE_DIR_MAP = WORKFLOW_LIFECYCLE_DIR_MAP;
 
 export const VALID_TRANSITIONS = {
   backlog: ["ready", "blocked", "archived"],
@@ -178,17 +105,7 @@ export interface TransitionCheck {
 }
 
 export function checkTransition(from: string, to: string): TransitionCheck {
-  if (!(LIFECYCLE_STAGES as readonly string[]).includes(from)) {
-    return { allowed: false, reason: `Unknown stage: "${from}"` };
-  }
-  if (!(LIFECYCLE_STAGES as readonly string[]).includes(to)) {
-    return { allowed: false, reason: `Unknown target stage: "${to}"` };
-  }
-  const allowed = (VALID_TRANSITIONS as Record<string, readonly string[]>)[from]?.includes(to) ?? false;
-  if (!allowed) {
-    return { allowed: false, reason: `Transition from "${from}" to "${to}" is not allowed` };
-  }
-  return { allowed: true };
+  return checkWorkflowTransition(from, to);
 }
 
 function isStage(value: string): value is LifecycleStage {

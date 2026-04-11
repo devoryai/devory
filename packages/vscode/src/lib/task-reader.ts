@@ -18,8 +18,8 @@ export const LIFECYCLE_STAGES = [
   "doing",
   "review",
   "blocked",
-  "archived",
   "done",
+  "archived",
 ] as const;
 
 export type LifecycleStage = (typeof LIFECYCLE_STAGES)[number];

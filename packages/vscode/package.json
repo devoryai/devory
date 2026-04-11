@@ -2,7 +2,7 @@
   "name": "devory-vscode",
   "displayName": "Devory.AI",
   "description": "Repo-aware task, run, doctrine, and review workflow for Devory in VS Code",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "DevoryAI",
   "engines": {
     "vscode": "^1.85.0"
@@ -87,6 +87,16 @@
         "title": "Devory: Resume Factory Run"
       },
       {
+        "command": "devory.runPause",
+        "title": "Devory: Pause or Resume Factory Run",
+        "icon": "$(debug-pause)"
+      },
+      {
+        "command": "devory.runStop",
+        "title": "Devory: Stop Factory Run",
+        "icon": "$(primitive-square)"
+      },
+      {
         "command": "devory.runInspect",
         "title": "Devory: Inspect Recent Runs"
       },
@@ -102,6 +112,10 @@
       {
         "command": "devory.factoryDoctor",
         "title": "Devory: Factory Doctor"
+      },
+      {
+        "command": "devory.cloudConnect",
+        "title": "Devory: Connect Cloud Account"
       },
       {
         "command": "devory.doctrineCreate",
@@ -178,19 +192,9 @@
           "group": "navigation"
         },
         {
-          "command": "devory.skillCreate",
+          "command": "devory.cloudConnect",
           "when": "view == devoryFactoryExplorer",
-          "group": "navigation@2"
-        },
-        {
-          "command": "devory.agentCreate",
-          "when": "view == devoryFactoryExplorer",
-          "group": "navigation@3"
-        },
-        {
-          "command": "devory.doctrineCreate",
-          "when": "view == devoryFactoryExplorer",
-          "group": "navigation@1"
+          "group": "navigation@0.5"
         },
         {
           "command": "devory.taskCreate",
@@ -209,13 +213,23 @@
         },
         {
           "command": "devory.runStart",
-          "when": "view == devoryTaskExplorer && devory.workspaceInitialized",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized && !devory.runActive",
           "group": "navigation@4"
         },
         {
-          "command": "devory.runResume",
-          "when": "view == devoryTaskExplorer && devory.workspaceInitialized",
+          "command": "devory.runStart",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized && devory.runPaused",
+          "group": "navigation@4"
+        },
+        {
+          "command": "devory.runPause",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized && devory.runActive",
           "group": "navigation@5"
+        },
+        {
+          "command": "devory.runStop",
+          "when": "view == devoryTaskExplorer && devory.workspaceInitialized && devory.runActive",
+          "group": "navigation@6"
         }
       ],
       "view/item/context": [
@@ -255,11 +269,6 @@
           "group": "inline"
         },
         {
-          "command": "devory.reviewQueue",
-          "when": "view == devoryTaskExplorer && viewItem == task.review",
-          "group": "navigation@3"
-        },
-        {
           "command": "devory.taskRequeue",
           "when": "view == devoryTaskExplorer && viewItem == task.archived",
           "group": "inline"
@@ -268,6 +277,11 @@
           "command": "devory.taskArchive",
           "when": "view == devoryTaskExplorer && viewItem =~ /^task\\.(backlog|ready|doing|review|blocked)$/",
           "group": "navigation@4"
+        },
+        {
+          "command": "devory.reviewQueue",
+          "when": "view == devoryTaskExplorer && viewItem == task.review",
+          "group": "navigation@3"
         },
         {
           "command": "devory.enrichTask",
@@ -382,7 +396,7 @@
           },
           {
             "id": "devory.step.createTask",
-            "title": "Create your first task",
+            "title": "Create Task",
             "description": "Describe a unit of work for the AI agent. It lands in ``tasks/backlog/`` ready to be promoted.\n\n[Create Task](command:devory.taskCreate)",
             "media": {
               "image": "icon.png",
@@ -404,9 +418,9 @@
   },
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --format=cjs",
-    "prepackage": "npm run build",
+    "prepackage": "npm --prefix ../.. run build:runtime && npx tsx ../../scripts/prepare-vscode-runtime.ts && npm run build",
     "package": "vsce package --no-dependencies --allow-missing-repository && npx tsx ../../scripts/validate-vsix-runtime.ts",
-    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts src/test/task-create.test.ts src/test/task-move.test.ts src/test/task-control.test.ts src/test/control-command-flow.test.ts src/test/contributions.test.ts src/test/capabilities.test.ts src/test/governance-status.test.ts src/test/run-adapter.test.ts src/test/seed-starter.test.ts src/test/find-devory-cli.test.ts src/test/init-workspace.test.ts src/test/bootstrap.test.ts src/test/factory-content.test.ts src/test/stored-data.test.ts"
+    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts src/test/task-create.test.ts src/test/task-move.test.ts src/test/task-control.test.ts src/test/control-command-flow.test.ts src/test/contributions.test.ts src/test/capabilities.test.ts src/test/governance-status.test.ts src/test/run-adapter.test.ts src/test/run-controller.test.ts src/test/seed-starter.test.ts src/test/find-devory-cli.test.ts src/test/init-workspace.test.ts src/test/bootstrap.test.ts src/test/factory-content.test.ts src/test/stored-data.test.ts"
   },
   "dependencies": {
     "@devory/cli": "*",

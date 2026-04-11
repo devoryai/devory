@@ -52,7 +52,7 @@ export function evaluateGovernanceCommandTransport(
   if (supabaseUrlValid && serviceRoleKeyPresent) {
     return {
       mode: "supabase",
-      summary: "Cloud commands: READY (Supabase)",
+      summary: "Cloud commands: READY (managed cloud backend)",
       supabaseUrl,
       supabaseUrlValid,
       serviceRoleKeyPresent,

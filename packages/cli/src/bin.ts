@@ -19,6 +19,7 @@ import * as artifacts from "./commands/artifacts.ts";
 import * as worker from "./commands/worker.ts";
 import * as config from "./commands/config.ts";
 import * as license from "./commands/license.ts";
+import * as cloud from "./commands/cloud.ts";
 import * as prPrep from "./commands/pr-prep.ts";
 import * as prCreate from "./commands/pr-create.ts";
 import * as improve from "./commands/improve.ts";
@@ -26,6 +27,7 @@ import * as diagnostics from "./commands/diagnostics.ts";
 import * as doctor from "./commands/doctor.ts";
 import * as governance from "./commands/governance.ts";
 import * as migrate from "./commands/migrate.ts";
+import * as setup from "./commands/setup.ts";
 
 const argv = process.argv.slice(2);
 
@@ -219,6 +221,35 @@ async function dispatch(): Promise<number> {
     return license.run(parsed.args!);
   }
 
+  // ── cloud <sub> ────────────────────────────────────────────
+  if (first === "cloud") {
+    if (rest.length === 0 || rest[0] === "--help" || rest[0] === "-h") {
+      console.log(
+        [
+          "devory cloud <subcommand>",
+          "",
+          "Subcommands:",
+          "  status  Show local cloud account/session status and workspace linkage",
+          "  login   Import a Devory cloud session for this workspace",
+          "  link    Link this repo to a cloud workspace ID",
+          "  logout  Remove the local cloud session",
+          "",
+          "Notes:",
+          "  - Local/Core and offline enterprise environments can continue using `devory license activate` without cloud login.",
+          "  - The common Pro/Teams path is `devory cloud login` followed by `devory cloud link --workspace-id <id>`.",
+        ].join("\n")
+      );
+      return 0;
+    }
+    if (rest.includes("--help") || rest.includes("-h")) {
+      console.log(helpFor(`cloud ${rest[0]}`));
+      return 0;
+    }
+    const parsed = cloud.parseArgs(rest);
+    if (parsed.error) fatal(`cloud: ${parsed.error}\n\nUsage: ${cloud.USAGE}`);
+    return cloud.run(parsed.args!);
+  }
+
   // ── pr-prep ────────────────────────────────────────────────
   if (first === "pr-prep") {
     if (rest.includes("--help") || rest.includes("-h")) {
@@ -357,6 +388,20 @@ async function dispatch(): Promise<number> {
     const parsed = migrate.parseArgs(rest);
     if (parsed.error) fatal(`migrate: ${parsed.error}\n\nUsage: ${migrate.USAGE}`);
     return migrate.run(parsed.args!);
+  }
+
+  // ── setup ──────────────────────────────────────────────────
+  if (first === "setup") {
+    if (rest.includes("--help") || rest.includes("-h")) {
+      console.log(helpFor("setup"));
+      return 0;
+    }
+    const parsed = setup.parseArgs(rest);
+    if (parsed.error !== null) {
+      if (parsed.error === "") { console.log(helpFor("setup")); return 0; }
+      fatal(`setup: ${parsed.error}\n\nUsage: ${setup.USAGE}`);
+    }
+    return setup.run(parsed.args!);
   }
 
   // ── unknown ────────────────────────────────────────────────

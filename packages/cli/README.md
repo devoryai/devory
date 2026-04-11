@@ -3,7 +3,8 @@
 The Devory CLI is the repo-first command surface for Devory.
 
 Use it to initialize a workspace, manage tasks and skills, run Devory, inspect
-configuration, operate governance mode, and prepare GitHub handoff artifacts.
+configuration, operate governance mode, connect a local workspace to Devory
+Cloud, and prepare GitHub handoff artifacts.
 
 ## Install Or Run
 
@@ -24,14 +25,16 @@ npx @devory/cli init
 - initialize a Devory workspace
 - create and validate tasks
 - move tasks through the lifecycle
+- bootstrap governance mode in one guided step
 - execute runs
-- inspect configuration and licensing
+- inspect configuration, licensing, and cloud linkage
 - prepare or create PRs from review-ready work
 
 ## Core Commands
 
 | Command | Description |
 |---|---|
+| `devory setup` | Guided end-to-end onboarding for governance-mode workspaces |
 | `devory init` | Create the Devory workspace structure in the current repo |
 | `devory task new` | Create a backlog task |
 | `devory task move` | Move a task between lifecycle stages |
@@ -46,6 +49,10 @@ npx @devory/cli init
 | `devory license activate` | Write a workspace license token |
 | `devory license clear` | Remove the local workspace license file and cache |
 | `devory license status` | Show resolved tier, key source, and fallback reason |
+| `devory cloud status` | Show local cloud session and workspace link status |
+| `devory cloud login` | Import a Devory cloud session into the current workspace |
+| `devory cloud link` | Bind the current workspace to a cloud workspace ID |
+| `devory cloud logout` | Remove the local cloud session without touching license activation |
 | `devory pr-prep` | Generate branch, commit, and PR description material from a task |
 | `devory pr-create` | Create a GitHub PR with explicit confirmation and token requirements |
 | `devory improve` | Persist a live improvement signal artifact |
@@ -62,8 +69,8 @@ npx @devory/cli init
 
 - `devory run` is a one-shot orchestrator pass.
 - `devory worker` is the runtime that polls and applies governance commands.
-- The public CLI package does not currently expose the private cloud/session
-  command family.
+- `devory setup` is the fastest way to get a new governance-mode repo wired end-to-end.
+- Cloud commands manage local session material and workspace linkage; they do not replace `devory worker`.
 
 ## Plans
 

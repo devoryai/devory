@@ -34,18 +34,15 @@ From there:
 
 The public repository currently exposes:
 
-- CLI workspace commands: `init`, `task`, `skill`, `run`, `worker`,
-  `artifacts`, `config`, `license`, `doctor`, `diagnostics`
+- CLI workspace commands: `setup`, `init`, `task`, `skill`, `run`, `worker`,
+  `artifacts`, `config`, `license`, `cloud`, `doctor`, `diagnostics`
 - CLI governance commands: `governance init`, `governance bind`,
   `governance status`, `governance doctor`, `governance enqueue-local`,
   `migrate`
 - CLI GitHub handoff commands: `pr-prep`, `pr-create`
 - VS Code commands for task lifecycle, task enrichment, review actions, run
-  start/resume, artifact inspection, governance status, and local data
-  transparency
-
-This public repo does not currently expose the private cloud/session command
-family.
+  start/pause/stop/resume, artifact inspection, governance status, cloud
+  connection, and local data transparency
 
 ## Plans
 

@@ -81,6 +81,27 @@ function writeFeatureFlag(workingRepoPath: string): void {
   );
 }
 
+function writeActiveState(
+  workingRepoPath: string,
+  state: { workspace_id: string; profile_id?: string; cloud_workspace_id?: string },
+): void {
+  fs.mkdirSync(path.join(workingRepoPath, ".devory"), { recursive: true });
+  fs.writeFileSync(
+    path.join(workingRepoPath, ".devory", "active-state.json"),
+    `${JSON.stringify(
+      {
+        workspace_id: state.workspace_id,
+        profile_id: state.profile_id ?? "balanced-default",
+        cloud_workspace_id: state.cloud_workspace_id,
+        updated_at: "2026-04-11T00:00:00.000Z",
+      },
+      null,
+      2,
+    )}\n`,
+    "utf-8",
+  );
+}
+
 afterEach(() => {
   for (const [key, value] of Object.entries(savedEnv)) {
     if (value === undefined) {
@@ -100,6 +121,7 @@ describe("governance doctor cloud command readiness", () => {
     const governanceRepo = makeTempDir("devory-governance-repo-");
     seedGovernanceRepo(governanceRepo);
     writeFeatureFlag(workingRepo);
+    writeActiveState(workingRepo, { workspace_id: "default", cloud_workspace_id: "cloud-ws-1" });
     assert.equal(
       runBind({
         governanceRepoPath: governanceRepo,
@@ -119,6 +141,11 @@ describe("governance doctor cloud command readiness", () => {
     assert.match(result.stdout, /Cloud commands: LOCAL FALLBACK \(.devory\/commands\)/);
     assert.match(result.stdout, /Polling runtime: devory worker \(factory-worker loop\)/);
     assert.match(result.stdout, /Runtime transport: local file queue/);
+    assert.match(result.stdout, /Active workspace:\s+default \(local app workspace selection\)/);
+    assert.match(result.stdout, /Cloud workspace:\s+cloud-ws-1 \(workspace identity for cloud-backed features\)/);
+    assert.match(result.stdout, /Cloud backend URL: not set/);
+    assert.match(result.stdout, /Runtime access key: MISSING/);
+    assert.match(result.stdout, /local\/Core usage does not require sign-in or cloud setup to get started/);
     assert.match(result.stdout, /Governance command polling happens in `devory worker`, not one-shot `devory run`\./);
   });
 
@@ -141,8 +168,8 @@ describe("governance doctor cloud command readiness", () => {
 
     const result = captureConsole(() => runDoctor({ workingRepoPath: workingRepo }));
     assert.equal(result.code, 0);
-    assert.match(result.stdout, /Cloud commands: READY \(Supabase\)/);
-    assert.match(result.stdout, /Runtime transport: Supabase/);
+    assert.match(result.stdout, /Cloud commands: READY \(managed cloud backend\)/);
+    assert.match(result.stdout, /Runtime transport: managed cloud backend/);
   });
 });
 
