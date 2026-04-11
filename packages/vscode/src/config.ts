@@ -5,10 +5,22 @@
  * falling back to the first workspace folder root when not explicitly set.
  */
 
-import * as vscode from "vscode";
 import * as path from "path";
 
 const CONFIG_KEY = "devory.factoryRoot";
+
+function loadVscodeWorkspace(): {
+  getConfiguration(): { get<T>(section: string, defaultValue: T): T };
+  workspaceFolders?: Array<{ uri: { fsPath: string } }>;
+} | null {
+  try {
+    // `vscode` exists in the extension host, but plain Node test runs do not provide it.
+    // Lazily loading keeps pure helper imports testable outside VS Code.
+    return require("vscode").workspace;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Returns the absolute factory root path.
@@ -18,14 +30,17 @@ const CONFIG_KEY = "devory.factoryRoot";
  *  3. Empty string (caller should handle gracefully)
  */
 export function getFactoryRoot(): string {
-  const cfg = vscode.workspace
+  const workspace = loadVscodeWorkspace();
+  if (!workspace) return "";
+
+  const cfg = workspace
     .getConfiguration()
     .get<string>(CONFIG_KEY, "")
     .trim();
 
   if (cfg) return cfg;
 
-  const folders = vscode.workspace.workspaceFolders;
+  const folders = workspace.workspaceFolders;
   if (folders && folders.length > 0) {
     return folders[0].uri.fsPath;
   }

@@ -21,8 +21,8 @@
   },
   "scripts": {
     "build": "npm run build:bin && npm run build:lib",
-    "build:bin": "esbuild src/bin.ts --bundle --outfile=dist/bin.js --platform=node --format=cjs --banner:js='#!/usr/bin/env node'",
-    "build:lib": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=node --format=cjs",
+    "build:bin": "esbuild src/bin.ts --bundle --outfile=dist/bin.js --platform=node --format=cjs --external:readline/promises --banner:js='#!/usr/bin/env node'",
+    "build:lib": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=node --format=cjs --external:readline/promises",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

@@ -14,7 +14,7 @@ describe("evaluateGovernanceCommandTransport", () => {
     });
 
     assert.equal(result.mode, "supabase");
-    assert.equal(result.summary, "Cloud commands: READY (Supabase)");
+    assert.equal(result.summary, "Cloud commands: READY (managed cloud backend)");
   });
 
   test("falls back to local queue when Supabase runtime credentials are missing", () => {

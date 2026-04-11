@@ -8,8 +8,8 @@
  * No webview required — uses VS Code notifications + the init output channel.
  */
 
-import * as vscode from "vscode";
 import * as cp from "child_process";
+import type { ExtensionContext, OutputChannel } from "vscode";
 import { findDevoryCli } from "./find-devory-cli.js";
 import { buildCliSpawnEnv } from "./cli-spawn-env.js";
 
@@ -32,7 +32,7 @@ const STATE_KEY = "devory.firstRunCompleted";
  *  - the workspace is already initialized (sets the flag silently and returns false)
  */
 export function shouldShowBootstrap(
-  context: Pick<vscode.ExtensionContext, "globalState">,
+  context: Pick<ExtensionContext, "globalState">,
   workspaceInitialized: boolean
 ): boolean {
   if (context.globalState.get<boolean>(STATE_KEY)) return false;
@@ -51,7 +51,7 @@ export function shouldShowBootstrap(
  * Call this after workspace initialization succeeds.
  */
 export function markFirstRunComplete(
-  context: Pick<vscode.ExtensionContext, "globalState">
+  context: Pick<ExtensionContext, "globalState">
 ): void {
   void context.globalState.update(STATE_KEY, true);
 }
@@ -71,7 +71,7 @@ export interface CliReadiness {
  */
 export async function checkAndLogCliReadiness(
   cwd: string,
-  output: vscode.OutputChannel
+  output: OutputChannel
 ): Promise<CliReadiness> {
   output.appendLine("[Devory] Checking environment…");
   output.appendLine(`[Devory]   Workspace : ${cwd}`);
@@ -171,11 +171,12 @@ function probeCliVersion(cwd: string, cliPath: string): Promise<string | null> {
  *     nothing — the prompt will appear again next session.
  */
 export async function runBootstrapFlow(
-  context: Pick<vscode.ExtensionContext, "globalState">,
+  context: Pick<ExtensionContext, "globalState">,
   cwd: string,
-  output: vscode.OutputChannel,
+  output: OutputChannel,
   runInit: () => Promise<void>
 ): Promise<void> {
+  const vscode = await import("vscode");
   // Populate the output channel before showing the notification so the user
   // sees meaningful content if they open the log.
   await checkAndLogCliReadiness(cwd, output);

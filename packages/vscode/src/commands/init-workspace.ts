@@ -1,7 +1,7 @@
-import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { spawn } from "child_process";
+import type { OutputChannel } from "vscode";
 import { findDevoryCli } from "../lib/find-devory-cli.js";
 import { buildCliSpawnEnv } from "../lib/cli-spawn-env.js";
 import { seedStarterFiles } from "../lib/seed-starter.js";
@@ -145,7 +145,7 @@ Support stages: blocked, archived
  */
 export function runBuiltinInit(
   dir: string,
-  output: vscode.OutputChannel
+  output: Pick<OutputChannel, "appendLine">
 ): void {
   function ensureDir(p: string): void {
     if (!fs.existsSync(p)) {
@@ -190,11 +190,12 @@ export function runBuiltinInit(
 // ---------------------------------------------------------------------------
 
 export async function initWorkspaceCommand(
-  outputChannel: vscode.OutputChannel,
+  outputChannel: OutputChannel,
   refreshTaskTree: () => void,
   refreshRunTree: () => void,
   runtimeRoot?: string
 ): Promise<void> {
+  const vscode = await import("vscode");
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   if (!workspaceFolder) {
     vscode.window.showErrorMessage(
