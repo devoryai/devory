@@ -14,6 +14,7 @@ export {
   createTask,
   moveTask,
   applyReviewAction,
+  applyLocalGovernanceCommand,
   buildTaskFilename,
   buildTaskSkeleton,
   buildReviewArtifact,

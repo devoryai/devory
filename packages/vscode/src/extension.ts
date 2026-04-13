@@ -128,6 +128,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (selected instanceof TaskItem) {
         taskAssistantProvider.setTask(selected.task);
       } else if (!selected) {
+        // Selection cleared — fall back to the active editor.
         const tasksDir = resolveTasksDir(getFactoryRoot());
         taskAssistantProvider.setTask(resolveActiveEditorTask(tasksDir));
       }
@@ -170,6 +171,7 @@ export function activate(context: vscode.ExtensionContext): void {
         factoryTreeProvider.setFactoryRoot(newRoot);
         syncCapabilityContext(newRoot, runtimeRoot);
         refreshGovernanceStatus();
+        // Re-resolve active task with new root.
         taskAssistantProvider.setTask(resolveActiveEditorTask(resolveTasksDir(newRoot)));
       }
     })

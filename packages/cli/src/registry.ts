@@ -114,6 +114,21 @@ export const COMMANDS: CommandSpec[] = [
     usage: "devory cloud logout [--root <dir>]",
   },
   {
+    name: "sync status",
+    description: "Show sync status between local filesystem and cloud workspace",
+    usage: "devory sync status",
+  },
+  {
+    name: "sync push",
+    description: "Push local artifacts and tasks to cloud workspace",
+    usage: "devory sync push [--dry-run] [--force]",
+  },
+  {
+    name: "sync pull",
+    description: "Pull cloud artifacts to local filesystem",
+    usage: "devory sync pull [--dry-run]",
+  },
+  {
     name: "pr-prep",
     description: "Generate branch name, commit message, and PR description from a task",
     usage: "devory pr-prep [<task-file>] [--dry-run]",

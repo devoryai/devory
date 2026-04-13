@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 
+import { createClient } from "@supabase/supabase-js";
 import {
   buildDefaultActiveState,
   detectTier,
@@ -15,6 +16,10 @@ import {
   writeSession,
   type DevorySession,
 } from "../lib/cloud-session.ts";
+import {
+  createCloudWorkspace,
+  fetchCloudWorkspaces,
+} from "../../../../workers/lib/cloud-workspace-store.js";
 
 export const NAME = "cloud";
 export const USAGE =
@@ -42,6 +47,8 @@ interface CloudLoginRequestResponse {
   expires_at: string;
   poll_interval_ms: number;
   approve_url: string;
+  supabase_url?: string;
+  supabase_anon_key?: string;
 }
 
 interface CloudLoginPollResponse {
@@ -267,6 +274,9 @@ async function pollHostedLoginSession(
         ...poll.session,
         source: poll.session.source ?? "cloud-cli-login",
         obtained_at: poll.session.obtained_at ?? new Date().toISOString(),
+        // Carry Supabase config from the initial request so CLI can connect
+        supabase_url: poll.session.supabase_url ?? request.supabase_url,
+        supabase_anon_key: poll.session.supabase_anon_key ?? request.supabase_anon_key,
       };
     }
 
@@ -303,11 +313,57 @@ async function runStatus(factoryRoot: string): Promise<number> {
   const session = readSession(factoryRoot);
   const activeState = readActiveState(factoryRoot);
 
+  let cloudPlan: string | null = null;
+  let workspaceCount: number | null = null;
+  let linkedWorkspaceAccessible: boolean | null = null;
+
+  if (session?.access_token) {
+    const url = session.supabase_url ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "";
+    const key = session.supabase_anon_key ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
+    if (url && key) {
+      try {
+        const client = createClient(url, key, {
+          global: { headers: { Authorization: `Bearer ${session.access_token}` } },
+        });
+
+        const [{ data: sub }, workspaces] = await Promise.all([
+          client
+            .from("subscriptions")
+            .select("plan")
+            .in("plan", ["pro", "pro_annual", "teams", "teams_annual", "lifetime"])
+            .eq("status", "active")
+            .limit(1)
+            .maybeSingle(),
+          fetchCloudWorkspaces(client),
+        ]);
+
+        cloudPlan = typeof sub?.plan === "string" ? sub.plan : null;
+        workspaceCount = workspaces.length;
+
+        const linkedWorkspace = session.workspace_id ?? activeState.cloud_workspace_id ?? null;
+        if (linkedWorkspace) {
+          linkedWorkspaceAccessible = workspaces.some((ws) => ws.workspace_id === linkedWorkspace);
+        }
+      } catch {
+        // Keep status non-fatal when cloud checks fail.
+      }
+    }
+  }
+
   console.log(`Factory root: ${factoryRoot}`);
   console.log(`Tier: ${license.tier === "teams" ? "Teams" : license.tier === "pro" ? "Pro" : "Core"}`);
+  if (cloudPlan) {
+    console.log(`Cloud plan: ${cloudPlan}`);
+  }
   console.log(`Cloud session: ${session ? "connected" : "not connected"}`);
   console.log(`Active workspace: ${activeState.workspace_id}`);
   console.log(`Linked cloud workspace: ${session?.workspace_id ?? activeState.cloud_workspace_id ?? "not linked"}`);
+  if (workspaceCount !== null) {
+    console.log(`Accessible cloud workspaces: ${workspaceCount}`);
+  }
+  if (linkedWorkspaceAccessible === false) {
+    console.log("Linked cloud workspace is not accessible to this account (RLS will block sync writes).");
+  }
 
   if (session?.user_email || session?.user_id) {
     console.log(`Account: ${session.user_email ?? session.user_id}`);
@@ -318,9 +374,16 @@ async function runStatus(factoryRoot: string): Promise<number> {
 
   console.log("");
   if (license.tier === "core") {
-    console.log("Core/local mode does not require cloud sign-in.");
-    console.log("If this environment is intentionally isolated, keep using `devory license activate` and local governance mode.");
-    console.log("If you later upgrade to Pro or Teams, connect a cloud session with `devory cloud login`.");
+    if (cloudPlan) {
+      console.log(
+        "Local license file is Core, but your connected cloud account has an active paid plan.",
+      );
+      console.log("Cloud commands can still use the cloud subscription where applicable.");
+    } else {
+      console.log("Core/local mode does not require cloud sign-in.");
+      console.log("If this environment is intentionally isolated, keep using `devory license activate` and local governance mode.");
+      console.log("If you later upgrade to Pro or Teams, connect a cloud session with `devory cloud login`.");
+    }
     return 0;
   }
 
@@ -340,6 +403,50 @@ async function runStatus(factoryRoot: string): Promise<number> {
   return 0;
 }
 
+async function autoLinkWorkspace(
+  session: DevorySession,
+  factoryRoot: string,
+): Promise<DevorySession> {
+  const url = session.supabase_url ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "";
+  const key = session.supabase_anon_key ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
+  if (!url || !key) return session;
+
+  try {
+    const client = createClient(url, key, {
+      global: { headers: { Authorization: `Bearer ${session.access_token}` } },
+    });
+
+    const workspaces = await fetchCloudWorkspaces(client);
+    if (session.workspace_id && workspaces.some((ws) => ws.workspace_id === session.workspace_id)) {
+      return session;
+    }
+
+    let workspaceId: string;
+
+    if (workspaces.length > 0) {
+      workspaceId = workspaces[0].workspace_id;
+      if (session.workspace_id && session.workspace_id !== workspaceId) {
+        console.log(`Re-linked to accessible cloud workspace: ${workspaces[0].name}`);
+      } else {
+        console.log(`Linked to existing cloud workspace: ${workspaces[0].name}`);
+      }
+    } else {
+      const name = path.basename(factoryRoot) || "My Workspace";
+      const ws = await createCloudWorkspace(client, { name });
+      workspaceId = ws.workspace_id;
+      console.log(`Created cloud workspace: ${ws.name}`);
+    }
+
+    return { ...session, workspace_id: workspaceId };
+  } catch (err) {
+    console.warn(
+      `Note: Could not auto-link workspace: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    console.warn("Run `devory cloud link --workspace-id <id>` to link manually.");
+    return session;
+  }
+}
+
 async function runLogin(factoryRoot: string, args: CloudArgs): Promise<number> {
   const imported = buildImportedSession(args, factoryRoot);
   if (imported) {
@@ -356,9 +463,17 @@ async function runLogin(factoryRoot: string, args: CloudArgs): Promise<number> {
     console.log(`This request expires at ${new Date(request.expires_at).toLocaleString()}.`);
     console.log("Waiting for approval...");
 
-    const session = await pollHostedLoginSession(request);
+    let session = await pollHostedLoginSession(request);
+
+    // Ensure login session points to an accessible workspace so sync won't fail under RLS.
+    session = await autoLinkWorkspace(session, factoryRoot);
+
     persistCloudSession(factoryRoot, session);
-    console.log("Cloud login complete. Next step: run `devory cloud status`.");
+    if (session.workspace_id) {
+      console.log("Cloud login complete. Run `devory sync push` to push local work to the cloud.");
+    } else {
+      console.log("Cloud login complete. Next step: run `devory cloud status`.");
+    }
     return 0;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -369,7 +484,7 @@ async function runLogin(factoryRoot: string, args: CloudArgs): Promise<number> {
   }
 }
 
-function runLink(factoryRoot: string, args: CloudArgs): number {
+async function runLink(factoryRoot: string, args: CloudArgs): Promise<number> {
   const session = readSession(factoryRoot);
   if (!session) {
     console.error("No cloud session found. Run `devory cloud login` first.");
@@ -377,6 +492,42 @@ function runLink(factoryRoot: string, args: CloudArgs): number {
   }
 
   const workspaceId = args.workspaceId!.trim();
+
+  // Validate that the linked workspace is actually accessible to this session.
+  // This prevents saving a typo'd/foreign workspace_id that later fails under RLS.
+  const url = session.supabase_url ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "";
+  const key = session.supabase_anon_key ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
+  if (url && key) {
+    try {
+      const client = createClient(url, key, {
+        global: { headers: { Authorization: `Bearer ${session.access_token}` } },
+      });
+      const workspaces = await fetchCloudWorkspaces(client);
+      if (workspaces.length === 0) {
+        console.error(
+          "No cloud workspaces are accessible to this account. " +
+          "Run `devory cloud login` to create/link a workspace, then retry.",
+        );
+        return 1;
+      }
+      if (!workspaces.some((ws) => ws.workspace_id === workspaceId)) {
+        console.error(
+          `Workspace ${workspaceId} is not available to this account. ` +
+          "Use `devory cloud status` to verify linkage or run `devory cloud login` to refresh your session.",
+        );
+        return 1;
+      }
+    } catch (err) {
+      console.error(
+        `Could not verify workspace access before linking: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      console.error("Run `devory cloud login` to refresh your session, then retry linking.");
+      return 1;
+    }
+  }
+
   const nextSession: DevorySession = {
     ...session,
     workspace_id: workspaceId,

@@ -8,6 +8,7 @@
 
 import {
   applyReviewAction,
+  applyLocalGovernanceCommand,
   moveTask,
   type ApplyReviewActionResult,
   type MoveTaskResult,
@@ -131,20 +132,24 @@ export function runTaskReviewWorkflow(
     };
   }
 
+  // When governance is active the review action is first written as a command file
+  // for audit purposes, but the task won't move unless the factory worker is running.
+  // Apply the command immediately so the file moves right away for local users.
+  if (result.executionMode === "governance-queued" && result.governanceCommandPath) {
+    const localResult = applyLocalGovernanceCommand(result.governanceCommandPath, deps.factoryRoot);
+    if (!localResult.ok) {
+      return { ok: false, error: `Task queued but could not be moved locally: ${localResult.error}` };
+    }
+  }
+
   deps.onChanged?.();
 
   const message =
-    result.executionMode === "governance-queued"
-      ? args.action === "approve"
-        ? `Devory: queued approval for ${args.label}.`
-        : args.action === "send-back"
-          ? `Devory: queued send-back for ${args.label}.`
-          : `Devory: queued block for ${args.label}.`
-      : args.action === "approve"
-        ? `Devory: approved ${args.label}.`
-        : args.action === "send-back"
-          ? `Devory: sent ${args.label} back to doing.`
-          : `Devory: blocked ${args.label}.`;
+    args.action === "approve"
+      ? `Devory: approved ${args.label}.`
+      : args.action === "send-back"
+        ? `Devory: sent ${args.label} back to doing.`
+        : `Devory: blocked ${args.label}.`;
 
   return { ok: true, message };
 }

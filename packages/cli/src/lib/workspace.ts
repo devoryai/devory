@@ -705,3 +705,105 @@ function _writeReviewArtifact(
     return null;
   }
 }
+
+// ---------------------------------------------------------------------------
+// applyLocalGovernanceCommand
+// ---------------------------------------------------------------------------
+
+const REVIEW_COMMAND_STAGE_MAP = {
+  "approve-task": "done",
+  "send-back-task": "doing",
+  "block-task": "blocked",
+} as const satisfies Partial<Record<string, LifecycleStage>>;
+
+/**
+ * Immediately applies a queued local governance command (approve / send-back / block)
+ * by moving the task file directly within the governance repo.
+ *
+ * This is called right after enqueueGovernanceReviewAction so that VS Code users
+ * don't need a running factory worker for their manual review actions to take effect.
+ * The command file is moved to the processed dir after a successful apply.
+ */
+export function applyLocalGovernanceCommand(
+  commandPath: string,
+  factoryRoot: string,
+): { ok: true; taskId: string; toStatus: LifecycleStage } | { ok: false; error: string } {
+  // Read the command envelope
+  let command: GovernanceCommandEnvelope;
+  try {
+    command = JSON.parse(fs.readFileSync(commandPath, "utf-8")) as GovernanceCommandEnvelope;
+  } catch (err) {
+    return { ok: false, error: `Cannot read command: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  const toStatus = REVIEW_COMMAND_STAGE_MAP[command.command_type as keyof typeof REVIEW_COMMAND_STAGE_MAP];
+  if (!toStatus) {
+    return { ok: false, error: `Unsupported command type: ${command.command_type}` };
+  }
+
+  const taskId = command.target_task_id ?? (command.payload?.task_id as string | undefined);
+  if (!taskId) {
+    return { ok: false, error: "Command has no target_task_id" };
+  }
+
+  // Resolve governance repo path from binding
+  const bindingPath = path.join(factoryRoot, ".devory", "governance.json");
+  if (!fs.existsSync(bindingPath)) {
+    return { ok: false, error: "Governance binding not found" };
+  }
+  let binding: GovernanceRepoBinding;
+  try {
+    binding = JSON.parse(fs.readFileSync(bindingPath, "utf-8")) as GovernanceRepoBinding;
+  } catch (err) {
+    return { ok: false, error: `Cannot read governance binding: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  const govTasksRoot = path.join(binding.governance_repo_path, "tasks");
+
+  // Find the task file in any stage directory
+  const stages: LifecycleStage[] = ["backlog", "ready", "doing", "review", "blocked", "done", "archived"];
+  let taskFilePath: string | null = null;
+  for (const stage of stages) {
+    const candidate = path.join(govTasksRoot, stage, `${taskId}.md`);
+    if (fs.existsSync(candidate)) {
+      taskFilePath = candidate;
+      break;
+    }
+  }
+
+  if (!taskFilePath) {
+    return { ok: false, error: `Task ${taskId} not found in governance repo tasks/` };
+  }
+
+  // Read, update frontmatter, move to new stage directory
+  let raw: string;
+  try {
+    raw = fs.readFileSync(taskFilePath, "utf-8");
+  } catch (err) {
+    return { ok: false, error: `Cannot read task file: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  const updated = rewriteStatus(raw, toStatus);
+  const destDir = path.join(govTasksRoot, toStatus);
+  const filename = path.basename(taskFilePath);
+  const destPath = path.join(destDir, filename);
+
+  try {
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.writeFileSync(taskFilePath, updated, "utf-8");
+    if (destPath !== taskFilePath) {
+      fs.renameSync(taskFilePath, destPath);
+    }
+  } catch (err) {
+    return { ok: false, error: `Move failed: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  // Move command file to processed (best-effort)
+  try {
+    const processedDir = path.join(factoryRoot, ".devory", "commands", "processed");
+    fs.mkdirSync(processedDir, { recursive: true });
+    fs.renameSync(commandPath, path.join(processedDir, path.basename(commandPath)));
+  } catch { /* non-fatal */ }
+
+  return { ok: true, taskId, toStatus };
+}

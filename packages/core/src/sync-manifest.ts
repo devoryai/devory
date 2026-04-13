@@ -21,6 +21,9 @@ export const SYNCABLE_ARTIFACT_TYPES = [
   "work-context",
   "write-back",
   "run-history",
+  "doctrine",
+  "skill",
+  "agent",
 ] as const;
 
 export type SyncableArtifactType = (typeof SYNCABLE_ARTIFACT_TYPES)[number];

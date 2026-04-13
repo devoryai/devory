@@ -20,6 +20,7 @@ import * as worker from "./commands/worker.ts";
 import * as config from "./commands/config.ts";
 import * as license from "./commands/license.ts";
 import * as cloud from "./commands/cloud.ts";
+import * as sync from "./commands/sync.ts";
 import * as prPrep from "./commands/pr-prep.ts";
 import * as prCreate from "./commands/pr-create.ts";
 import * as improve from "./commands/improve.ts";
@@ -248,6 +249,26 @@ async function dispatch(): Promise<number> {
     const parsed = cloud.parseArgs(rest);
     if (parsed.error) fatal(`cloud: ${parsed.error}\n\nUsage: ${cloud.USAGE}`);
     return cloud.run(parsed.args!);
+  }
+
+  // ── sync <sub> ────────────────────────────────────────────
+  if (first === "sync") {
+    if (rest.length === 0 || rest[0] === "--help" || rest[0] === "-h") {
+      console.log(
+        [
+          "devory sync <subcommand>",
+          "",
+          "Subcommands:",
+          "  status  Show sync status between local and cloud",
+          "  push    Push local artifacts and tasks to cloud",
+          "  pull    Pull cloud artifacts to local filesystem",
+        ].join("\n")
+      );
+      return 0;
+    }
+    const parsed = sync.parseArgs(rest);
+    if (parsed.error) fatal(`sync: ${parsed.error}\n\nUsage: ${sync.USAGE}`);
+    return sync.run(parsed.args!);
   }
 
   // ── pr-prep ────────────────────────────────────────────────

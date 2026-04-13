@@ -10,6 +10,8 @@ export interface DevorySession {
   expires_at?: string;
   source?: string;
   obtained_at?: string;
+  supabase_url?: string;
+  supabase_anon_key?: string;
 }
 
 function asString(value: unknown): string | undefined {
@@ -36,6 +38,8 @@ export function normalizeSession(value: unknown): DevorySession | null {
     expires_at: asString(record.expires_at),
     source: asString(record.source),
     obtained_at: asString(record.obtained_at),
+    supabase_url: asString(record.supabase_url),
+    supabase_anon_key: asString(record.supabase_anon_key),
   };
 }
 
