@@ -1,10 +1,10 @@
 {
   "name": "@devory/cli",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Devory CLI — formal command interface for Devory",
   "repository": {
     "type": "git",
-    "url": "https://github.com/devoryai/devory"
+    "url": "git+https://github.com/devoryai/devory.git"
   },
   "main": "./dist/index.js",
   "types": "./src/index.ts",
@@ -17,7 +17,7 @@
     "README.md"
   ],
   "bin": {
-    "devory": "./dist/bin.js"
+    "devory": "dist/bin.js"
   },
   "scripts": {
     "build": "npm run build:bin && npm run build:lib",
@@ -26,12 +26,12 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@devory/github": "0.4.5",
+    "@devory/github": "0.4.6",
     "@supabase/supabase-js": "^2.50.5",
     "glob": "^11.0.3"
   },
   "devDependencies": {
-    "@devory/core": "0.4.5",
+    "@devory/core": "0.4.6",
     "esbuild": "^0.20.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"

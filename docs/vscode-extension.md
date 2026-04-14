@@ -29,11 +29,11 @@ shared interfaces (`@devory/core`, `@devory/cli`).
 2. **Install the .vsix in VS Code**:
    - Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
    - Run **"Extensions: Install from VSIX..."**
-   - Select `packages/vscode/devory-vscode-0.4.5.vsix`
+   - Select `packages/vscode/devory-vscode-0.4.6.vsix`
 
    Or from the terminal:
    ```sh
-   code --install-extension packages/vscode/devory-vscode-0.4.5.vsix
+   code --install-extension packages/vscode/devory-vscode-0.4.6.vsix
    ```
 
 3. **Reload VS Code** when prompted.
