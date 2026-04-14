@@ -15,6 +15,7 @@ export type ManagedRunState = "idle" | "running" | "paused";
 export interface ManagedRunHooks {
   onOutput?: (chunk: string) => void;
   onStateChange?: (state: ManagedRunState) => void;
+  onRunId?: (runId: string) => void;
   onExit?: (result: { exitCode: number; signal: string | null; stdout: string; stderr: string }) => void;
 }
 
@@ -89,7 +90,7 @@ export class RunController {
     child.stdout.on("data", (chunk: Buffer | string) => {
       const text = chunk.toString();
       this.stdout += text;
-      this.captureRunId(factoryRoot, text);
+      this.captureRunId(factoryRoot, text, hooks);
       hooks.onOutput?.(text);
     });
     child.stderr.on("data", (chunk: Buffer | string) => {
@@ -179,7 +180,7 @@ export class RunController {
     return { ok: true };
   }
 
-  private captureRunId(factoryRoot: string, text: string): void {
+  private captureRunId(factoryRoot: string, text: string, hooks: ManagedRunHooks): void {
     const match = text.match(/\[orchestrator\] (?:Created run|Resuming run): ([^\s]+)/);
     if (!match) {
       return;
@@ -188,12 +189,16 @@ export class RunController {
     if (!runId) {
       return;
     }
+    if (this.activeRunId === runId) {
+      return;
+    }
     this.activeRunId = runId;
     updateLocalRunControl(factoryRoot, (current) => ({
       run_id: runId,
       requested_action: current?.requested_action ?? null,
       acknowledged_action: current?.acknowledged_action ?? null,
     }));
+    hooks.onRunId?.(runId);
   }
 
   private setState(state: ManagedRunState, hooks: ManagedRunHooks): void {

@@ -32,7 +32,11 @@ export async function runResumeCommand(
     runs.map((run) => ({
       label: run.run_id,
       description: formatRunLabel(run),
-      detail: run.summary ?? run.failure_reason ?? run.status,
+      detail:
+        run.failure?.reason ??
+        run.unattended_execution?.progress.summary ??
+        run.unattended_execution?.escalation.summary ??
+        run.status,
     })),
     {
       title: "Devory: Resume Run",

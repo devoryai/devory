@@ -1,0 +1,15 @@
+{
+  "default_preference": "auto",
+  "cloud_allowed": true,
+  "local_only": false,
+  "require_cloud_confirmation": true,
+  "max_estimated_cloud_cost_usd": null,
+  "preferred_local_provider": null,
+  "preferred_cloud_provider": null,
+  "preferred_local_targets": [],
+  "preferred_cloud_targets": [],
+  "enabled_targets": [],
+  "disabled_targets": [],
+  "sensitive_workspace_mode": false,
+  "allow_fallback_to_cloud": true
+}

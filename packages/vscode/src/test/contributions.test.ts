@@ -17,6 +17,7 @@ const thisDir =
 const packageJson = JSON.parse(
   fs.readFileSync(path.resolve(thisDir, "..", "..", "package.json"), "utf-8")
 ) as {
+  activationEvents?: string[];
   contributes?: {
     commands?: Array<{ command: string; title: string }>;
     menus?: Record<string, Array<{ command: string; when?: string; group?: string }>>;
@@ -48,8 +49,18 @@ describe("VS Code contribution placement", () => {
     const commands = contributedCommands();
     assert.ok(commands.includes("devory.showGovernanceStatus"));
     assert.ok(commands.includes("devory.cloudConnect"));
+    assert.ok(commands.includes("devory.showRoutingOutcomeSummary"));
     assert.ok(commands.includes("devory.showStoredDataLocations"));
     assert.ok(commands.includes("devory.sweepWorkshop"));
+  });
+
+  test("activates when any Devory sidebar view is opened", () => {
+    const activationEvents = packageJson.activationEvents ?? [];
+    assert.ok(activationEvents.includes("onStartupFinished"));
+    assert.ok(activationEvents.includes("onView:devoryTaskExplorer"));
+    assert.ok(activationEvents.includes("onView:devoryFactoryExplorer"));
+    assert.ok(activationEvents.includes("onView:devoryShowWork"));
+    assert.ok(activationEvents.includes("onView:devoryTaskAssistant"));
   });
 
   test("keeps generation and visibility terminology consistent", () => {

@@ -48,6 +48,7 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 | `Devory: Stop Factory Run` | Request an orderly stop for the active run |
 | `Devory: Show Work` | Open live execution visibility (run state, heartbeat, doing/review focus) |
 | `Devory: Inspect Recent Runs` | Open recent run records from the editor |
+| `Devory: Show Routing Outcome Summary` | Summarize recent routing outcome ledger records in the Devory output channel |
 | `Devory: Inspect Artifacts` | Browse saved execution outputs |
 | `Devory: Factory Doctor` | Check workspace and CLI/runtime readiness |
 | `Devory: Connect Cloud Account` | Start the local cloud-account connection flow |
@@ -65,6 +66,9 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 
 - `Devory: Start Factory Run` uses the packaged local runtime and shows an
   advisory dry-run/cost estimate summary before launch.
+- Run start now profiles ready tasks, applies routing policy, resolves concrete
+  targets and adapters, and preserves selected versus actual execution metadata
+  in the routing outcome ledger.
 - `Devory: Resume Factory Run` resumes an existing failed or paused run record.
 - `Devory: Pause or Resume Factory Run` and `Devory: Stop Factory Run` write local run-control signals that the active runtime checks between steps.
 - The extension exposes review and lifecycle commands directly, but those
@@ -83,3 +87,10 @@ The extension works directly against the repo:
 - `runs/` for run records
 - `artifacts/` for durable execution output
 - `doctrine/` and `skills/` for engineering guidance and reuse
+
+## Routing Outcome Review
+
+- Ledger path: `artifacts/routing-outcomes/execution-outcomes.jsonl`
+- Command: `Devory: Show Routing Outcome Summary`
+- Truth model: selected provider/target/adapter and actual provider/target/adapter stay separate
+- Cloud behavior: local-first by default; cloud-bound runs can require confirmation depending on routing policy

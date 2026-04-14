@@ -2,7 +2,7 @@
   "name": "devory-vscode",
   "displayName": "Devory.AI",
   "description": "Repo-aware task, run, doctrine, and review workflow for Devory in VS Code",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "publisher": "DevoryAI",
   "engines": {
     "vscode": "^1.85.0"
@@ -12,7 +12,11 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onView:devoryTaskExplorer",
+    "onView:devoryFactoryExplorer",
+    "onView:devoryShowWork",
+    "onView:devoryTaskAssistant"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -104,6 +108,10 @@
       {
         "command": "devory.runInspect",
         "title": "Devory: Inspect Recent Runs"
+      },
+      {
+        "command": "devory.showRoutingOutcomeSummary",
+        "title": "Devory: Show Routing Outcome Summary"
       },
       {
         "command": "devory.artifactInspect",
@@ -472,7 +480,7 @@
     "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --format=cjs",
     "prepackage": "npm run build",
     "package": "vsce package --no-dependencies --allow-missing-repository && npx tsx ../../scripts/validate-vsix-runtime.ts",
-    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts src/test/task-create.test.ts src/test/task-move.test.ts src/test/task-control.test.ts src/test/control-command-flow.test.ts src/test/post-commit-handoff.test.ts src/test/contributions.test.ts src/test/capabilities.test.ts src/test/governance-status.test.ts src/test/run-adapter.test.ts src/test/run-controller.test.ts src/test/seed-starter.test.ts src/test/find-devory-cli.test.ts src/test/init-workspace.test.ts src/test/bootstrap.test.ts src/test/factory-content.test.ts src/test/stored-data.test.ts"
+    "test": "tsx --test src/test/task-reader.test.ts src/test/run-reader.test.ts src/test/cli-bridge.test.ts src/test/task-create.test.ts src/test/task-move.test.ts src/test/task-control.test.ts src/test/control-command-flow.test.ts src/test/post-commit-handoff.test.ts src/test/contributions.test.ts src/test/capabilities.test.ts src/test/governance-status.test.ts src/test/run-adapter.test.ts src/test/run-controller.test.ts src/test/seed-starter.test.ts src/test/find-devory-cli.test.ts src/test/init-workspace.test.ts src/test/bootstrap.test.ts src/test/factory-content.test.ts src/test/stored-data.test.ts src/test/execution-outcome.test.ts src/test/execution-outcome-summary.test.ts"
   },
   "dependencies": {
     "@devory/cli": "*",

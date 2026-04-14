@@ -48,6 +48,12 @@ writeLicenseToken('/path/to/workspace', 'devory_pro_...')
 clearLicenseToken('/path/to/workspace')
 ```
 
+## Routing Control Plane
+
+`@devory/core` exports the routing-control-plane helpers used by the VS Code run surface, including task profiling, routing policy resolution, provider registry selection, concrete target resolution, readiness checks, adapter resolution, and execution binding.
+
+These helpers are deterministic and inspectable. They preserve selected-versus-actual truth rather than collapsing the route into one synthetic value.
+
 ## Requirements
 
 - Node.js 18+

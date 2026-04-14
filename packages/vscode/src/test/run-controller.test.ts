@@ -48,6 +48,7 @@ describe("RunController", () => {
     const factoryRoot = makeFactoryRoot();
     const runtimeRoot = "/runtime";
     const states: string[] = [];
+    const observedRunIds: string[] = [];
     let spawnCount = 0;
     const controller = new RunController(() => {
       spawnCount += 1;
@@ -56,6 +57,7 @@ describe("RunController", () => {
 
     const started = await controller.start(factoryRoot, runtimeRoot, {}, {
       onStateChange: (state) => states.push(state),
+      onRunId: (runId) => observedRunIds.push(runId),
     });
 
     assert.equal(started.started, true);
@@ -91,6 +93,7 @@ describe("RunController", () => {
     assert.deepEqual(states[0], "running");
     assert.ok(states.includes("paused"));
     assert.deepEqual(states.at(-1), "idle");
+    assert.deepEqual(observedRunIds, ["run-123"]);
   });
 
   test("writes a graceful stop request instead of killing immediately", async () => {

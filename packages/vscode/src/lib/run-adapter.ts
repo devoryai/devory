@@ -12,6 +12,13 @@ import * as path from "path";
 export interface RunStartArgs {
   limit?: number;
   resumeId?: string;
+  /**
+   * Routing env vars from the execution binding layer.
+   * Injected into the runner subprocess environment so the orchestrator
+   * can honor the routing decision where supported.
+   * Keys are DEVORY_* env var names; values are strings.
+   */
+  routingEnv?: Record<string, string>;
 }
 
 export interface RunRuntimeInvocation {
@@ -59,6 +66,13 @@ export function resolvePackagedRunInvocation(
       ...process.env,
       DEVORY_FACTORY_ROOT: factoryRoot,
       DEVORY_RUNTIME_ROOT: runtimeRoot,
+      FACTORY_DEFAULT_ENGINE:
+        args.routingEnv?.DEVORY_ADAPTER_INVOCATION_MODE?.trim() ||
+        process.env.FACTORY_DEFAULT_ENGINE,
+      // Routing binding env vars (from execution binding layer).
+      // Injected so the orchestrator can honor the routing decision where supported.
+      // Keys are DEVORY_PROVIDER_CLASS, DEVORY_EXECUTION_PATH, etc.
+      ...(args.routingEnv ?? {}),
     },
   };
 }

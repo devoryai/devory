@@ -8,7 +8,6 @@
 
 import {
   applyReviewAction,
-  applyLocalGovernanceCommand,
   moveTask,
   type ApplyReviewActionResult,
   type MoveTaskResult,
@@ -132,20 +131,17 @@ export function runTaskReviewWorkflow(
     };
   }
 
-  // When governance is active the review action is first written as a command file
-  // for audit purposes, but the task won't move unless the factory worker is running.
-  // Apply the command immediately so the file moves right away for local users.
+  // Governance-queued review actions are recorded truthfully and require the
+  // worker/governance loop to apply them. Do not fake a local move here.
   if (result.executionMode === "governance-queued" && result.governanceCommandPath) {
-    const localResult = applyLocalGovernanceCommand(result.governanceCommandPath, deps.factoryRoot);
-    if (!localResult.ok) {
-      const queuedMessage =
-        args.action === "approve"
-          ? `Devory: queued approval for ${args.label}.`
-          : args.action === "send-back"
-            ? `Devory: queued send-back for ${args.label}.`
-            : `Devory: queued block for ${args.label}.`;
-      return { ok: true, message: queuedMessage };
-    }
+    deps.onChanged?.();
+    const queuedMessage =
+      args.action === "approve"
+        ? `Devory: queued approval for ${args.label}.`
+        : args.action === "send-back"
+          ? `Devory: queued send-back for ${args.label}.`
+          : `Devory: queued block for ${args.label}.`;
+    return { ok: true, message: queuedMessage };
   }
 
   deps.onChanged?.();

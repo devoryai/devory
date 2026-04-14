@@ -64,9 +64,12 @@ export async function taskCreateCommand(factoryRoot: string): Promise<void> {
         { id: trimmedId, title, project, goal: goal.trim() || undefined },
         {
           factoryRoot,
-          openTextDocument: (filePath) => vscode.workspace.openTextDocument(filePath),
+          openTextDocument: async (filePath) =>
+            vscode.workspace.openTextDocument(filePath),
           showTextDocument: async (doc) => {
-            const editor = await vscode.window.showTextDocument(doc);
+            const editor = await vscode.window.showTextDocument(
+              doc as vscode.TextDocument
+            );
             return {
               setCursor(line, column) {
                 const pos = new vscode.Position(line, column);

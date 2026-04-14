@@ -76,6 +76,8 @@ npx @devory/cli init
   surfaces; the CLI remains the explicit shell command surface.
 - Dry-run/cost estimate messaging is currently surfaced in VS Code run-start
   flow, not as a standalone CLI command.
+- Routing outcome ledger review is also a VS Code surface today via
+  `Devory: Show Routing Outcome Summary`; the CLI remains the shell command surface.
 
 ## Plans
 

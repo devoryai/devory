@@ -77,6 +77,20 @@ export {
 } from "./work-context.ts";
 export type { WorkContext, WorkContextSource, WorkContextStatus } from "./work-context.ts";
 export {
+  detectTargetReadiness,
+  isReadinessSelectable,
+  probeOllamaReadiness,
+  resolveOllamaBaseUrl,
+} from "./target-readiness.ts";
+export type {
+  DetectTargetReadinessOptions,
+  OllamaProbeResult,
+  ProbeOllamaReadinessOptions,
+  TargetReadinessRecord,
+  TargetReadinessSnapshot,
+  TargetReadinessState,
+} from "./target-readiness.ts";
+export {
   clearLicenseCache,
   clearLicenseToken,
   detectTier,
@@ -146,6 +160,13 @@ export type {
   LocalRunControlAction,
   LocalRunControlState,
 } from "./local-run-control.ts";
+export { resolveExecutionAdapter } from "./execution-adapter-resolution.ts";
+export type {
+  AdapterExecutionPath,
+  ExecutionAdapterId,
+  ExecutionAdapterInvocationMode,
+  ResolvedExecutionAdapter,
+} from "./execution-adapter-resolution.ts";
 export {
   applyTaskRoutingOutcomeEvaluation,
   normalizeRunRecord,
@@ -536,3 +557,83 @@ export type {
   GovernanceCommandTransportMode,
   GovernanceCommandTransportResolution,
 } from "./command-transport.ts";
+export { profileTask } from "./task-profiler.ts";
+export type {
+  ComplexityTier,
+  LocalViabilityTier,
+  RecommendedProviderClass,
+  TaskProfile,
+  TaskProfileSignals,
+} from "./task-profiler.ts";
+export {
+  PROVIDER_REGISTRY,
+  buildRegistryFromEnvironment,
+  detectOllamaConfigured,
+  getAvailableProviders,
+  getFallbackProvider,
+  getProviderById,
+  withOllamaAvailability,
+} from "./provider-registry.ts";
+export type {
+  ProviderCapabilityTier,
+  ProviderClassEntry,
+  ProviderClassId,
+  ProviderCostProfile,
+  ProviderLocality,
+} from "./provider-registry.ts";
+export {
+  buildProviderTargetRegistry,
+  resolveProviderTarget,
+} from "./provider-target-resolver.ts";
+export type {
+  ProviderTargetAdapterId,
+  ProviderTargetEntry,
+  ProviderTargetRegistryOptions,
+  ResolveProviderTargetOptions,
+  ResolvedProviderTarget,
+} from "./provider-target-resolver.ts";
+export {
+  EXECUTION_PREFERENCE_LABELS,
+  VALID_EXECUTION_PREFERENCES,
+  formatRoutingDecisionSummary,
+  routeExecution,
+  summarizeRoutingDecisions,
+} from "./execution-router.ts";
+export type {
+  ExecutionPreference,
+  ExecutionRoutingDecision,
+  RouteExecutionOptions,
+  RoutingConfidence,
+  RoutingSummary,
+} from "./execution-router.ts";
+export {
+  bindExecution,
+  buildExecutionBindingEnv,
+  formatBindingRecord,
+} from "./execution-binding.ts";
+export type {
+  ExecutionBindingResult,
+  ExecutionPath,
+  PerTaskBinding,
+} from "./execution-binding.ts";
+export {
+  applyRoutingPolicyOverrides,
+  DEFAULT_ROUTING_POLICY,
+  formatRoutingPolicySummary,
+  loadDefaultRoutingPolicy,
+  loadWorkspaceRoutingPolicy,
+  normalizeRoutingPolicyOverrides,
+  resolveRoutingPolicy,
+  ROUTING_POLICY_FILENAME,
+  ROUTING_POLICY_VERSION,
+  ROUTING_POLICY_WORKSPACE_PATH,
+  VALID_ROUTING_POLICY_PREFERENCES,
+  VALID_ROUTING_POLICY_PROVIDER_CLASSES,
+} from "./routing-policy.ts";
+export type {
+  RoutingPolicy,
+  RoutingPolicyOverrides,
+  RoutingPolicyPreference,
+  RoutingPolicyProviderClass,
+  RoutingPolicyResolution,
+} from "./routing-policy.ts";

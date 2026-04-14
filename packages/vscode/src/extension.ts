@@ -33,6 +33,7 @@ import { runResumeCommand } from "./commands/run-resume.js";
 import { runPauseCommand } from "./commands/run-pause.js";
 import { runStopCommand } from "./commands/run-stop.js";
 import { runInspectCommand } from "./commands/run-inspect.js";
+import { routingOutcomeSummaryCommand } from "./commands/routing-outcome-summary.js";
 import { artifactInspectCommand } from "./commands/artifact-inspect.js";
 import { factoryDoctorCommand } from "./commands/factory-doctor.js";
 import { cloudConnectCommand } from "./commands/cloud-connect.js";
@@ -656,6 +657,12 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       const { runsDir: rd, artifactsDir } = getFactoryPaths(root);
       runInspectCommand(rd, artifactsDir);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devory.showRoutingOutcomeSummary", () => {
+      void routingOutcomeSummaryCommand(getFactoryRoot(), runOutput);
     })
   );
 

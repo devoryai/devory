@@ -42,6 +42,16 @@ describe("resolvePackagedRunInvocation", () => {
       "run-177",
     ]);
   });
+
+  test("maps adapter invocation mode onto FACTORY_DEFAULT_ENGINE", () => {
+    const invocation = resolvePackagedRunInvocation("/workspace", "/extension/runtime", {
+      routingEnv: {
+        DEVORY_ADAPTER_INVOCATION_MODE: "ollama",
+      },
+    });
+
+    assert.equal(invocation.env.FACTORY_DEFAULT_ENGINE, "ollama");
+  });
 });
 
 describe("startFactoryRun", () => {

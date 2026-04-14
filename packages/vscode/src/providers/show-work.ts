@@ -26,8 +26,7 @@ const REFRESH_INTERVAL_MS = 5_000;
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type WebviewMessage =
-  | { type: "invokeCommand"; command: string }
-  | { type: "openTask"; taskId: string };
+  | { type: "invokeCommand"; command: string };
 
 // ── Provider ─────────────────────────────────────────────────────────────────
 
@@ -57,9 +56,6 @@ export class ShowWorkProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage((msg: WebviewMessage) => {
       if (msg.type === "invokeCommand") {
-        void vscode.commands.executeCommand(msg.command);
-      } else if (msg.type === "openTask") {
-        // Open the task file in the editor if we can find it.
         void vscode.commands.executeCommand(msg.command);
       }
     });
