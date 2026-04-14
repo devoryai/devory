@@ -19,6 +19,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
+import { execFileSync } from "child_process";
 import {
   TASK_REVIEW_ACTIONS,
   TASK_REVIEW_ACTION_STAGE_MAP,
@@ -741,7 +742,7 @@ export function applyLocalGovernanceCommand(
     return { ok: false, error: `Unsupported command type: ${command.command_type}` };
   }
 
-  const taskId = command.target_task_id ?? (command.payload?.task_id as string | undefined);
+  const taskId = command.target_task_id ?? ((command.payload as Record<string, unknown>)?.task_id as string | undefined);
   if (!taskId) {
     return { ok: false, error: "Command has no target_task_id" };
   }
@@ -804,6 +805,22 @@ export function applyLocalGovernanceCommand(
     fs.mkdirSync(processedDir, { recursive: true });
     fs.renameSync(commandPath, path.join(processedDir, path.basename(commandPath)));
   } catch { /* non-fatal */ }
+
+  // Commit the move to the governance repo so the change is persisted in git.
+  try {
+    execFileSync("git", ["add", "--all"], { cwd: binding.governance_repo_path, stdio: "pipe" });
+    execFileSync(
+      "git",
+      ["commit", "--message", `chore: ${command.command_type} ${taskId} → ${toStatus} [local]`],
+      { cwd: binding.governance_repo_path, stdio: "pipe" },
+    );
+  } catch (err) {
+    // Non-fatal — the task is already moved on disk; a failed commit just means
+    // the user will need to commit manually (or the next sync will pick it up).
+    console.warn(
+      `[governance] git commit failed after ${command.command_type}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   return { ok: true, taskId, toStatus };
 }

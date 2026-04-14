@@ -30,6 +30,22 @@ From there:
 3. Run Devory.
 4. Review the result and artifacts.
 
+## Current Workflow Features
+
+- Generate Tasks from Idea (VS Code): deterministic task decomposition from a
+  short intent, preview-before-save, explicit commit to backlog.
+- Task refinement:
+  - deterministic enrichment commands (acceptance criteria, verification,
+    dependencies, files likely affected)
+  - AI-assisted refinement in the Task Assistant panel
+- Post-commit handoff (VS Code generation flow): run first task, reveal in
+  explorer, or open Show Work.
+- Show Work (VS Code): run-state and heartbeat visibility for active work.
+- Governance mode: CLI and web governance surfaces for command submission and
+  worker-applied outcomes.
+- Dry Run / Cost Estimate (VS Code run start): advisory estimate shown before
+  execution; estimate does not block run start.
+
 ## Current Public Command Surfaces
 
 The public repository currently exposes:
@@ -41,8 +57,21 @@ The public repository currently exposes:
   `migrate`
 - CLI GitHub handoff commands: `pr-prep`, `pr-create`
 - VS Code commands for task lifecycle, task enrichment, review actions, run
-  start/pause/stop/resume, artifact inspection, governance status, cloud
-  connection, and local data transparency
+  start/pause/stop/resume, task generation from idea, show-work visibility,
+  artifact inspection, governance status, cloud connection, and local data
+  transparency
+
+## Platform Truths
+
+- CLI:
+  - source of truth for shell-invokable automation (`run`, `worker`,
+    governance commands, PR prep/create)
+- VS Code:
+  - strongest local operator surface for generation, refinement, run control,
+    post-commit handoff, and Show Work visibility
+- Web:
+  - governance command and coordination surface; does not replace local runtime
+  - queued governance commands are applied by `devory worker`
 
 ## Plans
 

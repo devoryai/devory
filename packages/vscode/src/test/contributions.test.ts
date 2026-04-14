@@ -37,6 +37,12 @@ function contributedCommands(): string[] {
   return (packageJson.contributes?.commands ?? []).map((entry) => entry.command);
 }
 
+function commandTitle(commandId: string): string {
+  return (
+    packageJson.contributes?.commands?.find((entry) => entry.command === commandId)?.title ?? ""
+  );
+}
+
 describe("VS Code contribution placement", () => {
   test("contributes governance status command", () => {
     const commands = contributedCommands();
@@ -44,6 +50,11 @@ describe("VS Code contribution placement", () => {
     assert.ok(commands.includes("devory.cloudConnect"));
     assert.ok(commands.includes("devory.showStoredDataLocations"));
     assert.ok(commands.includes("devory.sweepWorkshop"));
+  });
+
+  test("keeps generation and visibility terminology consistent", () => {
+    assert.equal(commandTitle("devory.generateTasksFromIdea"), "Devory: Generate Tasks from Idea");
+    assert.equal(commandTitle("devory.showWork"), "Devory: Show Work");
   });
 
   test("places cloud connect alongside other factory controls", () => {

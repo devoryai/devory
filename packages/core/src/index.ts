@@ -7,6 +7,11 @@
 
 export { parseFrontmatter } from "./parse.ts";
 export {
+  DRY_RUN_MODEL_PRICING,
+  estimateDryRunForTask,
+  estimateDryRunForTaskSources,
+} from "./dry-run-estimate.ts";
+export {
   EXTERNAL_WORK_ITEM_SOURCES,
   buildExternalWorkItemFixture,
   normalizeExternalWorkItem,
@@ -104,6 +109,16 @@ export type {
   LoadedStandards,
 } from "./standards.ts";
 export type { TaskMeta, ParseResult } from "./parse.ts";
+export type {
+  DryRunEstimate,
+  DryRunEstimateConfidence,
+  DryRunEstimateFactors,
+  DryRunEstimateOptions,
+  DryRunEstimateSuggestion,
+  DryRunPricingEntry,
+  DryRunSizeTier,
+  DryRunTaskSource,
+} from "./dry-run-estimate.ts";
 export type {
   LoadedSkillFile,
   SkillInjection,

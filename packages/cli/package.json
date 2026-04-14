@@ -1,6 +1,6 @@
 {
   "name": "@devory/cli",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Devory CLI — formal command interface for Devory",
   "repository": {
     "type": "git",
@@ -26,7 +26,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@devory/github": "0.3.1"
+    "@devory/github": "0.4.4",
+    "@supabase/supabase-js": "^2.50.5",
+    "glob": "^11.0.3"
   },
   "devDependencies": {
     "@devory/core": "*",

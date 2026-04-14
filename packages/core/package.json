@@ -1,6 +1,6 @@
 {
   "name": "@devory/core",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Shared types and workspace utilities for Devory",
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
   "scripts": {
     "build": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=node --format=cjs",
     "prepublishOnly": "npm run build",
-    "test": "tsx --test src/parse.test.ts src/license.test.ts src/factory-environment.test.ts src/execution-policy.test.ts src/run-ledger.test.ts src/task-draft.test.ts src/task-markdown-renderer.test.ts src/task-validation.test.ts src/planning-draft.test.ts src/review-control.test.ts src/unattended-execution.test.ts src/unattended-checkpoint.test.ts src/unattended-stall-policy.test.ts src/routing-input.test.ts src/routing-evaluation.test.ts src/human-question.test.ts src/human-question-event.test.ts src/human-interruption-policy.test.ts src/slack-notification.test.ts"
+    "test": "tsx --test src/parse.test.ts src/license.test.ts src/factory-environment.test.ts src/dry-run-estimate.test.ts src/execution-policy.test.ts src/run-ledger.test.ts src/task-draft.test.ts src/task-markdown-renderer.test.ts src/task-validation.test.ts src/planning-draft.test.ts src/review-control.test.ts src/unattended-execution.test.ts src/unattended-checkpoint.test.ts src/unattended-stall-policy.test.ts src/routing-input.test.ts src/routing-evaluation.test.ts src/human-question.test.ts src/human-question-event.test.ts src/human-interruption-policy.test.ts src/slack-notification.test.ts"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

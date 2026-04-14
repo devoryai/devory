@@ -23,6 +23,9 @@ beforeEach(() => {
   delete process.env.FACTORY_MODE;
   delete process.env.DEVORY_REMOTE_FACTORY_URL;
   delete process.env.FACTORY_REMOTE_URL;
+  delete process.env.VERCEL;
+  delete process.env.NEXT_PUBLIC_APP_ENV;
+  delete process.env.APP_ENV;
 });
 
 afterEach(() => {
@@ -33,6 +36,9 @@ afterEach(() => {
   delete process.env.FACTORY_MODE;
   delete process.env.DEVORY_REMOTE_FACTORY_URL;
   delete process.env.FACTORY_REMOTE_URL;
+  delete process.env.VERCEL;
+  delete process.env.NEXT_PUBLIC_APP_ENV;
+  delete process.env.APP_ENV;
 });
 
 describe("findFactoryContextDir", () => {
@@ -127,6 +133,16 @@ describe("resolveFactoryMode", () => {
 
   test("treats remote url configuration as hosted mode", () => {
     process.env.DEVORY_REMOTE_FACTORY_URL = "https://factory.example.com";
+    assert.equal(resolveFactoryMode(), "hosted");
+  });
+
+  test("treats cloud app environment as hosted mode", () => {
+    process.env.NEXT_PUBLIC_APP_ENV = "cloud";
+    assert.equal(resolveFactoryMode(), "hosted");
+  });
+
+  test("treats vercel runtime as hosted mode", () => {
+    process.env.VERCEL = "1";
     assert.equal(resolveFactoryMode(), "hosted");
   });
 });

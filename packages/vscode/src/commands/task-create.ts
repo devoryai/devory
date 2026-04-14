@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode";
-import { runTaskCreateWorkflow } from "../lib/task-create.js";
+import { runTaskCreateWorkflow, suggestTaskCreateDefaults } from "../lib/task-create.js";
 
 export async function taskCreateCommand(factoryRoot: string): Promise<void> {
   if (!factoryRoot) {
@@ -16,10 +16,13 @@ export async function taskCreateCommand(factoryRoot: string): Promise<void> {
     return;
   }
 
+  const defaults = suggestTaskCreateDefaults(factoryRoot);
+
   const id = await vscode.window.showInputBox({
     title: "Devory: Create Task (1/4)",
     prompt: "Task ID — used as the filename and referenced in depends_on chains",
-    placeHolder: "my-project-001",
+    value: defaults.id,
+    placeHolder: defaults.id,
     validateInput: (v) =>
       /^[a-zA-Z0-9_-]+$/.test(v.trim())
         ? null
@@ -38,7 +41,8 @@ export async function taskCreateCommand(factoryRoot: string): Promise<void> {
   const project = await vscode.window.showInputBox({
     title: "Devory: Create Task (3/4)",
     prompt: "Project name — the codebase or product this task belongs to",
-    placeHolder: "my-project",
+    value: defaults.project,
+    placeHolder: defaults.project,
     validateInput: (v) => (v.trim() ? null : "Project is required"),
   });
   if (!project) return;

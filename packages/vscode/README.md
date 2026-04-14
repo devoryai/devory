@@ -28,6 +28,7 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 | `Devory: Initialize Workspace` | Create the Devory workspace structure |
 | `Devory: List Tasks` | Open a task picker grouped by lifecycle stage |
 | `Devory: Create Task` | Add a new task |
+| `Devory: Generate Tasks from Idea` | Deterministically expand one idea into previewable task drafts, then commit selected drafts to backlog |
 | `Devory: Move Task` | Move a task directly to another stage |
 | `Devory: Promote Task` | Move work forward through the lifecycle |
 | `Devory: Open Review Queue` | Jump into review-ready work |
@@ -45,6 +46,7 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 | `Devory: Resume Factory Run` | Resume a failed or paused run |
 | `Devory: Pause or Resume Factory Run` | Request a pause, or resume from the same control point |
 | `Devory: Stop Factory Run` | Request an orderly stop for the active run |
+| `Devory: Show Work` | Open live execution visibility (run state, heartbeat, doing/review focus) |
 | `Devory: Inspect Recent Runs` | Open recent run records from the editor |
 | `Devory: Inspect Artifacts` | Browse saved execution outputs |
 | `Devory: Factory Doctor` | Check workspace and CLI/runtime readiness |
@@ -61,11 +63,17 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 
 ## Runtime Notes
 
-- `Devory: Start Factory Run` uses the packaged local runtime.
+- `Devory: Start Factory Run` uses the packaged local runtime and shows an
+  advisory dry-run/cost estimate summary before launch.
 - `Devory: Resume Factory Run` resumes an existing failed or paused run record.
 - `Devory: Pause or Resume Factory Run` and `Devory: Stop Factory Run` write local run-control signals that the active runtime checks between steps.
 - The extension exposes review and lifecycle commands directly, but those
   commands still operate against the repository state on disk.
+- `Devory: Generate Tasks from Idea` uses deterministic generation first,
+  previews all generated drafts before any save, then offers post-commit
+  handoff actions.
+- `Devory: Show Work` is a visibility/control surface; it does not replace
+  governance command execution by `devory worker`.
 
 ## Workspace Shape
 

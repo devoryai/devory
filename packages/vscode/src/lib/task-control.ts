@@ -138,7 +138,13 @@ export function runTaskReviewWorkflow(
   if (result.executionMode === "governance-queued" && result.governanceCommandPath) {
     const localResult = applyLocalGovernanceCommand(result.governanceCommandPath, deps.factoryRoot);
     if (!localResult.ok) {
-      return { ok: false, error: `Task queued but could not be moved locally: ${localResult.error}` };
+      const queuedMessage =
+        args.action === "approve"
+          ? `Devory: queued approval for ${args.label}.`
+          : args.action === "send-back"
+            ? `Devory: queued send-back for ${args.label}.`
+            : `Devory: queued block for ${args.label}.`;
+      return { ok: true, message: queuedMessage };
     }
   }
 

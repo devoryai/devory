@@ -16,6 +16,7 @@ import * as path from "path";
 import {
   findGoalCursorLine,
   runTaskCreateWorkflow,
+  suggestTaskCreateDefaults,
   type TextDocumentLike,
 } from "../lib/task-create.js";
 
@@ -100,5 +101,37 @@ describe("runTaskCreateWorkflow", () => {
     assert.equal(result.openedInEditor, false);
     assert.ok(fs.existsSync(result.filePath));
     assert.equal(typeof result.cursorLine, "number");
+  });
+});
+
+describe("suggestTaskCreateDefaults", () => {
+  test("defaults project to the repo name and keeps sequential numbering from existing tasks", () => {
+    const repoRoot = path.join(tmpDir, "devory");
+    const backlogDir = path.join(repoRoot, "tasks", "backlog");
+    const doneDir = path.join(repoRoot, "tasks", "done");
+    fs.mkdirSync(backlogDir, { recursive: true });
+    fs.mkdirSync(doneDir, { recursive: true });
+    fs.writeFileSync(path.join(backlogDir, "factory-009-something.md"), "# task\n", "utf-8");
+    fs.writeFileSync(path.join(doneDir, "factory-120-finished.md"), "# task\n", "utf-8");
+    fs.writeFileSync(path.join(doneDir, "other-003-unrelated.md"), "# task\n", "utf-8");
+
+    const defaults = suggestTaskCreateDefaults(repoRoot);
+
+    assert.deepEqual(defaults, {
+      id: "factory-121",
+      project: "devory",
+    });
+  });
+
+  test("falls back to a repo-name-based starter id when no tasks exist yet", () => {
+    const repoRoot = path.join(tmpDir, "my-app");
+    fs.mkdirSync(path.join(repoRoot, "tasks", "backlog"), { recursive: true });
+
+    const defaults = suggestTaskCreateDefaults(repoRoot);
+
+    assert.deepEqual(defaults, {
+      id: "my-app-001",
+      project: "my-app",
+    });
   });
 });

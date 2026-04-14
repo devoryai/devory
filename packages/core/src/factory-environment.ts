@@ -143,6 +143,15 @@ export function resolveFactoryMode(env: NodeJS.ProcessEnv = process.env): Factor
   if (explicitMode === "hosted") return "hosted";
   if (explicitMode === "local") return "local";
 
+  const appEnv = trimEnv(env.NEXT_PUBLIC_APP_ENV) ?? trimEnv(env.APP_ENV);
+  if (appEnv === "hosted" || appEnv === "cloud") {
+    return "hosted";
+  }
+
+  if (trimEnv(env.VERCEL) === "1") {
+    return "hosted";
+  }
+
   if (trimEnv(env.DEVORY_REMOTE_FACTORY_URL) || trimEnv(env.FACTORY_REMOTE_URL)) {
     return "hosted";
   }

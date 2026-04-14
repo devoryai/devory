@@ -25,6 +25,7 @@ npx @devory/cli init
 - initialize a Devory workspace
 - create and validate tasks
 - move tasks through the lifecycle
+- operate deterministic governance and lifecycle transitions
 - bootstrap governance mode in one guided step
 - execute runs
 - inspect configuration, licensing, and cloud linkage
@@ -71,6 +72,10 @@ npx @devory/cli init
 - `devory worker` is the runtime that polls and applies governance commands.
 - `devory setup` is the fastest way to get a new governance-mode repo wired end-to-end.
 - Cloud commands manage local session material and workspace linkage; they do not replace `devory worker`.
+- Task generation from idea, post-commit handoff, and Show Work are VS Code
+  surfaces; the CLI remains the explicit shell command surface.
+- Dry-run/cost estimate messaging is currently surfaced in VS Code run-start
+  flow, not as a standalone CLI command.
 
 ## Plans
 

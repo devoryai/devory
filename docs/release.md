@@ -65,7 +65,7 @@ cd /path/to/devory-public
 ./scripts/bump-version.sh <new-version>
 
 # Example
-./scripts/bump-version.sh 0.2.0
+./scripts/bump-version.sh 0.4.4
 ```
 
 The script validates semver format and updates `version` in each `package.json`.
@@ -79,10 +79,10 @@ node scripts/check-versions.js
 
 ```bash
 git add -A
-git commit -m "chore: bump to v0.2.0"
+git commit -m "chore: bump to v0.4.4"
 
 # Tag for npm packages + VS Code extension (same tag triggers both workflows)
-git tag v0.2.0
+git tag v0.4.4
 ```
 
 To release VS Code only (e.g., a hotfix without an npm version bump):
