@@ -308,7 +308,7 @@ function finalize(
   refreshRunTree();
   const seededSuffix =
     seededSummary && (seededSummary.doctrine.length > 0 || seededSummary.skills.length > 0)
-      ? ` Starter doctrine: ${seededSummary.doctrine.slice(0, 2).join(", ")}. Starter skills: ${seededSummary.skills.slice(0, 2).join(", ")}. Open Devory: Factory to inspect them.`
+      ? ` Starter doctrine: ${seededSummary.doctrine.slice(0, 2).join(", ")}. Starter skills: ${seededSummary.skills.slice(0, 2).join(", ")}. Open Devory: Governance to inspect them.`
       : "";
   vscode.window.showInformationMessage(
     `Devory: Workspace initialized. Tasks and run folders are ready.${seededSuffix}`

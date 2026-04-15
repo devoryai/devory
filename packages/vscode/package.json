@@ -124,7 +124,7 @@
       },
       {
         "command": "devory.factoryDoctor",
-        "title": "Devory: Factory Doctor",
+        "title": "Devory: Governance Doctor",
         "icon": "$(tools)"
       },
       {
@@ -205,7 +205,7 @@
         },
         {
           "id": "devoryFactoryExplorer",
-          "name": "Devory: Factory"
+          "name": "Devory: Governance"
         },
         {
           "id": "devoryTaskAssistant",

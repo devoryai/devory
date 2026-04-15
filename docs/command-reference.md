@@ -607,7 +607,7 @@ rewrite existing sections.
 
 - `Devory: Initialize Workspace`
   First-run workspace bootstrap from inside the editor.
-- `Devory: Factory Doctor`
+- `Devory: Governance Doctor`
   Runs both `devory doctor` and `devory governance doctor`, streaming output to
   an output channel.
 - `Devory: Connect Cloud Account`
@@ -615,7 +615,7 @@ rewrite existing sections.
 - `Devory: Show Governance Status`
   Reads governance readiness and command transport status into an output view.
 - `Devory: Refresh Task Explorer`
-  Refreshes the task and factory explorer views.
+  Refreshes the task and governance explorer views.
 
 ### Factory content management
 

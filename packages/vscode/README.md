@@ -50,7 +50,7 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 | `Devory: Inspect Recent Runs` | Open recent run records from the editor |
 | `Devory: Show Routing Outcome Summary` | Summarize recent routing outcome ledger records in the Devory output channel |
 | `Devory: Inspect Artifacts` | Browse saved execution outputs |
-| `Devory: Factory Doctor` | Check workspace and CLI/runtime readiness |
+| `Devory: Governance Doctor` | Check workspace and CLI/runtime readiness |
 | `Devory: Connect Cloud Account` | Start the local cloud-account connection flow |
 | `Devory: Create Doctrine File` | Create a new doctrine file |
 | `Devory: Create Skill` | Scaffold a reusable skill |
@@ -60,7 +60,7 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 | `Devory: Show Governance Status` | Report governance readiness and transport status |
 | `Devory: Show Stored Data Locations` | Explain extension-owned local data versus project data |
 | `Devory: Sweep the Workshop` | Delete only extension-owned local data |
-| `Devory: Refresh Task Explorer` | Refresh task and factory views |
+| `Devory: Refresh Task Explorer` | Refresh task and governance views |
 
 ## Runtime Notes
 

@@ -119,13 +119,13 @@ All commands are available from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift
 | **Devory: Show Routing Outcome Summary** | Summarize recent routing outcome ledger records from `artifacts/routing-outcomes/execution-outcomes.jsonl` in the Devory output channel. |
 | **Devory: Inspect Artifacts** | Browse all run artifacts in `artifacts/`; select one to open it. |
 | **Devory: Initialize Workspace** | Bootstrap a Devory workspace from inside VS Code. |
-| **Devory: Factory Doctor** | Run `devory doctor` and `devory governance doctor`, streaming output to the extension output channel. |
+| **Devory: Governance Doctor** | Run `devory doctor` and `devory governance doctor`, streaming output to the extension output channel. |
 | **Devory: Connect Cloud Account** | Show `devory cloud status` output and open the browser sign-in entrypoint when requested. |
 | **Devory: Show Governance Status** | Print governance readiness, worker expectations, and command transport status. |
 | **Devory: Create Doctrine File** | Create a new file inside `doctrine/`. |
-| **Devory: Archive Doctrine File** | Archive an existing doctrine file from the factory explorer. |
+| **Devory: Archive Doctrine File** | Archive an existing doctrine file from the governance explorer. |
 | **Devory: Create Skill** | Scaffold a new skill directory and `SKILL.md`. |
-| **Devory: Archive Skill** | Archive a skill from the factory explorer. |
+| **Devory: Archive Skill** | Archive a skill from the governance explorer. |
 | **Devory: Create Agent** | Scaffold a new agent definition in `agents/`. |
 | **Devory: Show Stored Data Locations** | Explain which files are extension-owned local data versus project data. |
 | **Devory: Sweep the Workshop** | Remove only extension-owned local data; project files and Devory workspace files are preserved. |
