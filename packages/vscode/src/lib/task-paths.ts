@@ -2,10 +2,14 @@ import * as path from "node:path";
 import { getFactoryPaths } from "../config.js";
 import { readGovernanceStatus } from "./governance-status.js";
 
-export function resolveTasksDir(factoryRoot: string): string {
+export function resolveTaskMutationRoot(factoryRoot: string): string {
   const snapshot = readGovernanceStatus(factoryRoot);
   if (snapshot.governanceModeOn && snapshot.governanceRepoPath) {
-    return path.join(snapshot.governanceRepoPath, "tasks");
+    return snapshot.governanceRepoPath;
   }
-  return getFactoryPaths(factoryRoot).tasksDir;
+  return factoryRoot;
+}
+
+export function resolveTasksDir(factoryRoot: string): string {
+  return path.join(resolveTaskMutationRoot(factoryRoot), "tasks");
 }

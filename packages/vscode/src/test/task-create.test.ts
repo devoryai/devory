@@ -79,6 +79,34 @@ describe("runTaskCreateWorkflow", () => {
     assert.deepEqual(result, { ok: false, error: "boom" });
   });
 
+  test("writes to the provided task root and fires onCreated after success", async () => {
+    const taskRoot = path.join(tmpDir, "governance-repo");
+    let createTaskFactoryRoot: string | null = null;
+    let createdCount = 0;
+
+    const result = await runTaskCreateWorkflow(
+      { id: "factory-123", title: "Governance create", project: "ai-dev-factory" },
+      {
+        factoryRoot: tmpDir,
+        taskRoot,
+        createTaskImpl: (args, options) => {
+          createTaskFactoryRoot = options.factoryRoot;
+          const filePath = path.join(options.factoryRoot, "tasks", "backlog", "factory-123-governance-create.md");
+          fs.mkdirSync(path.dirname(filePath), { recursive: true });
+          fs.writeFileSync(filePath, "---\nid: factory-123\n---\n\n## Goal\n\n", "utf-8");
+          return { ok: true, filePath, content: fs.readFileSync(filePath, "utf-8") };
+        },
+        onCreated: () => {
+          createdCount += 1;
+        },
+      }
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(createTaskFactoryRoot, taskRoot);
+    assert.equal(createdCount, 1);
+  });
+
   test("still succeeds when the editor cannot open the new file", async () => {
     const result = await runTaskCreateWorkflow(
       { id: "factory-122", title: "Open failure", project: "ai-dev-factory" },

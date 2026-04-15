@@ -239,7 +239,7 @@ export async function run(args: SyncArgs): Promise<number> {
         return 0;
       }
       try {
-        const taskResult = await syncTasksToCloud(client, workspaceId, root, { orgId: userId });
+        const taskResult = await syncTasksToCloud(client, workspaceId, root, { orgId: userId, force: args.force });
         if (taskResult.pushed.length > 0) {
           console.log(`\nSynced ${taskResult.pushed.length} task(s) to board.`);
         } else {

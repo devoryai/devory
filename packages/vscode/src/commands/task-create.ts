@@ -8,8 +8,14 @@
 import * as vscode from "vscode";
 import { runTaskCreateWorkflow, suggestTaskCreateDefaults } from "../lib/task-create.js";
 
-export async function taskCreateCommand(factoryRoot: string): Promise<void> {
-  if (!factoryRoot) {
+export async function taskCreateCommand(
+  factoryRoot: string,
+  taskRoot?: string,
+  onCreated?: () => void
+): Promise<void> {
+  const effectiveTaskRoot = taskRoot ?? factoryRoot;
+
+  if (!factoryRoot || !effectiveTaskRoot) {
     vscode.window.showErrorMessage(
       "Devory: factory root not found. Set devory.factoryRoot in settings."
     );
@@ -64,6 +70,8 @@ export async function taskCreateCommand(factoryRoot: string): Promise<void> {
         { id: trimmedId, title, project, goal: goal.trim() || undefined },
         {
           factoryRoot,
+          taskRoot: effectiveTaskRoot,
+          onCreated,
           openTextDocument: async (filePath) =>
             vscode.workspace.openTextDocument(filePath),
           showTextDocument: async (doc) => {

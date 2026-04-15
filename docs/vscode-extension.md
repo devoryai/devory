@@ -29,11 +29,11 @@ shared interfaces (`@devory/core`, `@devory/cli`).
 2. **Install the .vsix in VS Code**:
    - Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
    - Run **"Extensions: Install from VSIX..."**
-   - Select `packages/vscode/devory-vscode-0.4.6.vsix`
+   - Select `packages/vscode/devory-vscode-0.4.7.vsix`
 
    Or from the terminal:
    ```sh
-   code --install-extension packages/vscode/devory-vscode-0.4.6.vsix
+   code --install-extension packages/vscode/devory-vscode-0.4.7.vsix
    ```
 
 3. **Reload VS Code** when prompted.
@@ -114,7 +114,7 @@ All commands are available from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift
 | **Devory: Resume Factory Run** | Resume a failed or paused run through the bundled runtime using `--resume <run-id>`. |
 | **Devory: Pause or Resume Factory Run** | Toggle the active run controller without leaving the editor. |
 | **Devory: Stop Factory Run** | Stop the active packaged runner from the editor. |
-| **Devory: Show Work** | Open the live operational panel for run state, heartbeat, and doing/review attention. |
+| **Devory: Show Work** | Open the live operational panel for run state, routing truth, heartbeat, and doing/review attention. |
 | **Devory: Inspect Recent Runs** | Browse the last 20 run records; select one to open a formatted markdown report. |
 | **Devory: Show Routing Outcome Summary** | Summarize recent routing outcome ledger records from `artifacts/routing-outcomes/execution-outcomes.jsonl` in the Devory output channel. |
 | **Devory: Inspect Artifacts** | Browse all run artifacts in `artifacts/`; select one to open it. |
@@ -201,6 +201,9 @@ clear error messages instead of silent file edits.
 - Resume is only offered for failed or paused runs with persisted run records.
 - Run start surfaces a dry-run estimate/cost summary before launch; this is an
   estimate, not an execution gate.
+- Run start now also surfaces a compact `Run Decision` summary before launch so
+  the user can review the selected route, actual binding, and any fallback or
+  confirmation-required state before execution begins.
 - Cloud confirmation is now part of the shipped routing-policy baseline. In the
   default `auto` path, Devory remains local-first, but a cloud-bound route is
   expected to require explicit confirmation rather than escalating casually.

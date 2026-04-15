@@ -3,6 +3,7 @@ import type {
   ExecutionOutcomeRecord,
   ExecutionOutcomeResultStatus,
 } from "./execution-outcome.js";
+import { describeOutcomeRoutingState } from "./routing-ux-labels.js";
 
 function asNullableComplexityTier(
   value: unknown
@@ -41,10 +42,12 @@ export interface ExecutionOutcomeSummary {
   malformed_lines: number;
   fallback_count: number;
   blocked_count: number;
+  route_drift_count: number;
   selected_provider_counts: Record<string, number>;
   actual_provider_counts: Record<string, number>;
   target_counts: Record<string, number>;
   status_counts: Record<string, number>;
+  state_counts: Record<string, number>;
   top_reasons: Array<{ reason: string; count: number }>;
   estimated_cost_exposure: {
     records_with_estimate: number;
@@ -331,8 +334,10 @@ export function summarizeExecutionOutcomes(
   const actualProviderCounts: Record<string, number> = {};
   const targetCounts: Record<string, number> = {};
   const statusCounts: Record<string, number> = {};
+  const stateCounts: Record<string, number> = {};
   let fallbackCount = 0;
   let blockedCount = 0;
+  let routeDriftCount = 0;
   let estimateCount = 0;
   let minUsdSum = 0;
   let maxUsdSum = 0;
@@ -345,12 +350,17 @@ export function summarizeExecutionOutcomes(
       record.actual_target_id ?? record.selected_target_id
     );
     incrementCount(statusCounts, record.run_result_status);
+    const routingState = describeOutcomeRoutingState(record);
+    incrementCount(stateCounts, routingState.label);
 
     if (record.fallback_taken) {
       fallbackCount += 1;
     }
     if (record.run_result_status === "blocked") {
       blockedCount += 1;
+    }
+    if (routingState.label === "route drift") {
+      routeDriftCount += 1;
     }
 
     if (
@@ -368,10 +378,12 @@ export function summarizeExecutionOutcomes(
     malformed_lines: malformedLines,
     fallback_count: fallbackCount,
     blocked_count: blockedCount,
+    route_drift_count: routeDriftCount,
     selected_provider_counts: sortedCounts(selectedProviderCounts),
     actual_provider_counts: sortedCounts(actualProviderCounts),
     target_counts: sortedCounts(targetCounts),
     status_counts: sortedCounts(statusCounts),
+    state_counts: sortedCounts(stateCounts),
     top_reasons: summarizeReasons(filtered),
     estimated_cost_exposure: {
       records_with_estimate: estimateCount,
@@ -416,6 +428,7 @@ export function renderExecutionOutcomeSummary(
     `Total records: ${summary.total_records}`,
     `Fallbacks: ${summary.fallback_count}`,
     `Blocked/prevented: ${summary.blocked_count}`,
+    `Selected vs actual drift: ${summary.route_drift_count}`,
     `Malformed lines skipped: ${summary.malformed_lines}`,
     "",
     ...renderCountSection(
@@ -432,6 +445,11 @@ export function renderExecutionOutcomeSummary(
       "Concrete Targets",
       summary.target_counts,
       "No concrete target data"
+    ),
+    ...renderCountSection(
+      "Routing States",
+      summary.state_counts,
+      "No routing state data"
     ),
     ...renderCountSection(
       "Run Result Statuses",

@@ -78,6 +78,7 @@ describe("execution outcome summary", () => {
     assert.equal(summary.total_records, 3);
     assert.equal(summary.fallback_count, 1);
     assert.equal(summary.blocked_count, 1);
+    assert.equal(summary.route_drift_count, 1);
     assert.deepEqual(summary.selected_provider_counts, {
       cloud_premium: 1,
       deterministic: 1,
@@ -94,6 +95,11 @@ describe("execution outcome summary", () => {
       blocked: 1,
       completed: 1,
       failed: 1,
+    });
+    assert.deepEqual(summary.state_counts, {
+      "fallback applied": 1,
+      "route drift": 1,
+      "policy block": 1,
     });
   });
 
@@ -200,6 +206,8 @@ describe("execution outcome summary", () => {
     assert.match(report, /Filters: last 2/);
     assert.match(report, /Total records: 2/);
     assert.match(report, /Fallbacks: 1/);
+    assert.match(report, /Selected vs actual drift:/);
+    assert.match(report, /Routing States/);
     assert.match(report, /Run Result Statuses/);
     assert.match(report, /Runner crashed during execution\./);
   });

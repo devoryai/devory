@@ -18,6 +18,7 @@ import {
   formatRelativeTime,
   type ShowWorkData,
 } from "../lib/show-work-reader.js";
+import { describeRoutingTruthState } from "../lib/routing-ux-labels.js";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -119,6 +120,9 @@ export class ShowWorkProvider implements vscode.WebviewViewProvider {
 
 /** Converts filesystem timestamps to formatted strings before sending to webview. */
 function serializeData(data: ShowWorkData) {
+  const routingTruthState = data.routingTruth
+    ? describeRoutingTruthState(data.routingTruth)
+    : null;
   return {
     doingTasks: data.doingTasks.map((t) => ({
       id: t.id,
@@ -147,6 +151,21 @@ function serializeData(data: ShowWorkData) {
           recentEventSummary: data.latestHeartbeat.recent_event_summary ?? null,
           lastHeartbeatAgo: formatRelativeTime(data.latestHeartbeat.last_heartbeat_at),
           suspicionFlags: data.latestHeartbeat.suspicion_flags ?? [],
+        }
+      : null,
+    routingTruth: data.routingTruth
+      ? {
+          runId: data.routingTruth.runId,
+          taskIds: data.routingTruth.taskIds,
+          selectedRoute: data.routingTruth.selectedRoute,
+          actualRoute: data.routingTruth.actualRoute,
+          status: data.routingTruth.status,
+          reason: data.routingTruth.reason,
+          fallbackTaken: data.routingTruth.fallbackTaken,
+          decompositionRecommended: data.routingTruth.decompositionRecommended,
+          recordedAgo: formatRelativeTime(data.routingTruth.recordedAt),
+          stateLabel: routingTruthState?.label ?? null,
+          stateDetail: routingTruthState?.detail ?? null,
         }
       : null,
   };
@@ -330,6 +349,33 @@ function buildShellHtml(): string {
     .attention-strip {
       border-left: 2px solid var(--vscode-terminal-ansiYellow, #dcdcaa);
       padding-left: 8px;
+    }
+    .routing-card {
+      background: var(--vscode-sideBar-background, rgba(255,255,255,0.03));
+      border: 1px solid var(--vscode-widget-border, rgba(255,255,255,0.1));
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+    }
+    .routing-title {
+      font-size: 0.84em;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .routing-row {
+      font-size: 0.78em;
+      line-height: 1.6;
+      color: var(--vscode-descriptionForeground);
+    }
+    .routing-row strong {
+      color: var(--vscode-editor-foreground);
+      font-weight: 600;
+    }
+    .routing-reason {
+      margin-top: 5px;
+      font-size: 0.78em;
+      line-height: 1.5;
+      color: var(--vscode-descriptionForeground);
     }
 
     /* ── Actions ── */
@@ -516,12 +562,48 @@ function buildShellHtml(): string {
         '</div>';
     }
 
+    function buildRoutingTruthCard(routingTruth) {
+      if (!routingTruth) return '';
+
+      const actualDiffers =
+        routingTruth.actualRoute &&
+        routingTruth.selectedRoute &&
+        routingTruth.actualRoute !== routingTruth.selectedRoute;
+      const taskRef = routingTruth.taskIds && routingTruth.taskIds.length > 0
+        ? routingTruth.taskIds.join(', ')
+        : 'latest routed work';
+      const statusBits = [];
+      if (routingTruth.stateLabel) statusBits.push(routingTruth.stateLabel);
+      if (routingTruth.recordedAgo) statusBits.push('updated ' + routingTruth.recordedAgo);
+
+      return '<div class="routing-card">' +
+        '<div class="routing-title">Execution Truth</div>' +
+        '<div class="routing-row"><strong>Task</strong> ' + esc(taskRef) + '</div>' +
+        (routingTruth.selectedRoute
+          ? '<div class="routing-row"><strong>Selected</strong> ' + esc(routingTruth.selectedRoute) + '</div>'
+          : '') +
+        (routingTruth.actualRoute
+          ? '<div class="routing-row"><strong>Actual</strong> ' +
+            esc(actualDiffers ? routingTruth.actualRoute : 'same as selected') + '</div>'
+          : '') +
+        (statusBits.length > 0
+          ? '<div class="routing-row"><strong>Status</strong> ' + esc(statusBits.join(' · ')) + '</div>'
+          : '') +
+        ((routingTruth.stateDetail || routingTruth.reason)
+          ? '<div class="routing-reason">' + esc(routingTruth.stateDetail || routingTruth.reason) + '</div>'
+          : '') +
+        '</div>';
+    }
+
     // ── Main render ─────────────────────────────────────────────────────────
     function render(runState, data) {
       const parts = [];
 
       // Run status banner (always shown).
       parts.push(buildRunBanner(runState, data.heartbeat));
+      if (data.routingTruth) {
+        parts.push(buildRoutingTruthCard(data.routingTruth));
+      }
 
       // Doing tasks.
       if (data.doingTasks && data.doingTasks.length > 0) {

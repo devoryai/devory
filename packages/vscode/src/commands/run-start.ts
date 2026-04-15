@@ -53,6 +53,7 @@ import {
   finalizeExecutionOutcome,
   type ExecutionOutcomeRecord,
 } from "../lib/execution-outcome.js";
+import { renderRunDecisionSummary } from "../lib/run-decision-summary.js";
 import { getRunById } from "../lib/run-reader.js";
 import { listTasksInStage } from "../lib/task-reader.js";
 
@@ -344,6 +345,13 @@ export async function runStartCommand(
     binding.actual_execution_path
   );
   const taskIds = readyTasks.map((task) => path.basename(task.filepath, ".md"));
+  const representativeDecision = finalDecisions[0] ?? null;
+  const runDecisionSummary = renderRunDecisionSummary({
+    taskCount: readyTasks.length,
+    preference: chosenPreference,
+    representativeDecision,
+    binding,
+  });
   const baseOutcomeRecord = buildRunStartOutcome(
     outcomeSession,
     {
@@ -424,65 +432,103 @@ export async function runStartCommand(
     );
   }
 
+  for (const line of runDecisionSummary.split("\n")) {
+    runOutput.appendLine(`[Devory] ${line}`);
+  }
+
+  const reopenPreferencePicker = (): void => {
+    void vscode.commands.executeCommand("devory.runStart");
+  };
+
+  const forceLocalStopMsg =
+    "Force local is selected, but no local provider (Ollama) is available. " +
+    "Start Ollama or switch to a different execution preference.";
+  const policyBlockMsg =
+    binding.selected_provider_class === "cloud_premium" &&
+    ollamaReadiness?.state === "unavailable"
+      ? "No ready local targets found; cloud escalation is not allowed."
+      : binding.policy_block_reason ??
+        "Routing policy has blocked this execution path.";
+  const adapterBlockMsg =
+    binding.adapter_fallback_reason ??
+    "Preferred target is resolved, but no truthful execution adapter path exists.";
+
   // Check for force_local violation — stop the run rather than silently cloud-escalate
   if (binding.force_local_violated) {
-    const stopMsg =
-      "Force local is selected, but no local provider (Ollama) is available. " +
-      "Start Ollama or switch to a different execution preference.";
-    runOutput.appendLine(`[Devory] ✖ Routing blocked: ${stopMsg}`);
-    appendFinalOutcome("blocked", stopMsg);
+    runOutput.appendLine(`[Devory] ✖ Routing blocked: ${forceLocalStopMsg}`);
+    appendFinalOutcome("blocked", forceLocalStopMsg);
     const action = await vscode.window.showWarningMessage(
-      `Devory: ${stopMsg}`,
+      `Devory:\n${runDecisionSummary}`,
+      { modal: true },
       "Change Preference",
       "Cancel Run"
     );
     if (action !== "Change Preference") {
       return;
     }
-    void vscode.commands.executeCommand("devory.runStart");
+    reopenPreferencePicker();
     return;
   }
 
   // Check for policy block — cloud or fallback disallowed by policy
   if (binding.blocked_by_policy) {
-    const blockMsg =
-      binding.selected_provider_class === "cloud_premium" &&
-      ollamaReadiness?.state === "unavailable"
-        ? "No ready local targets found; cloud escalation is not allowed."
-        :
-      binding.policy_block_reason ??
-      "Routing policy has blocked this execution path.";
-    runOutput.appendLine(`[Devory] ✖ Policy block: ${blockMsg}`);
-    appendFinalOutcome("blocked", blockMsg);
-    void vscode.window.showWarningMessage(
-      `Devory: ${blockMsg} Change routing policy or use a different preference.`
+    runOutput.appendLine(`[Devory] ✖ Policy block: ${policyBlockMsg}`);
+    appendFinalOutcome("blocked", policyBlockMsg);
+    const action = await vscode.window.showWarningMessage(
+      `Devory:\n${runDecisionSummary}`,
+      { modal: true },
+      "Change Preference",
+      "Cancel Run"
     );
+    if (action === "Change Preference") {
+      reopenPreferencePicker();
+    }
     return;
   }
 
   if (!binding.actual_adapter_id || !binding.actual_execution_path) {
-    const stopMsg =
-      binding.adapter_fallback_reason ??
-      "Preferred target is resolved, but no truthful execution adapter path exists.";
-    runOutput.appendLine(`[Devory] ✖ Adapter block: ${stopMsg}`);
-    appendFinalOutcome("blocked", stopMsg);
-    void vscode.window.showWarningMessage(`Devory: ${stopMsg}`);
+    runOutput.appendLine(`[Devory] ✖ Adapter block: ${adapterBlockMsg}`);
+    appendFinalOutcome("blocked", adapterBlockMsg);
+    void vscode.window.showWarningMessage(
+      `Devory:\n${runDecisionSummary}`,
+      { modal: true }
+    );
     return;
   }
 
   // Check for cloud confirmation requirement
   if (binding.cloud_confirmation_required) {
-    const confirmMsg =
-      "Cloud execution is selected and requires confirmation per routing policy " +
-      "(require_cloud_confirmation=true).";
-    runOutput.appendLine(`[Devory] ⚠ Cloud confirmation required: ${confirmMsg}`);
+    runOutput.appendLine(
+      "[Devory] ⚠ Cloud confirmation required before launch."
+    );
     const confirmed = await vscode.window.showWarningMessage(
-      `Devory: ${confirmMsg} Proceed with cloud execution?`,
+      `Devory:\n${runDecisionSummary}`,
+      { modal: true },
       "Proceed",
+      "Change Preference",
       "Cancel"
     );
+    if (confirmed === "Change Preference") {
+      reopenPreferencePicker();
+      return;
+    }
     if (confirmed !== "Proceed") {
       appendFinalOutcome("cancelled", "Cloud execution confirmation declined.");
+      return;
+    }
+  } else {
+    const proceed = await vscode.window.showInformationMessage(
+      `Devory:\n${runDecisionSummary}`,
+      { modal: true },
+      "Continue",
+      "Change Preference",
+      "Cancel"
+    );
+    if (proceed === "Change Preference") {
+      reopenPreferencePicker();
+      return;
+    }
+    if (proceed !== "Continue") {
       return;
     }
   }
@@ -509,18 +555,8 @@ export async function runStartCommand(
   runOutput.appendLine(`[Devory] Starting factory run${limit !== undefined ? ` (limit: ${limit})` : ""}…`);
   runOutput.appendLine(`[Devory] ${estimateDetail}`);
   runOutput.appendLine(`[Devory] Routing: ${routingSummary.summary_line}`);
-  runOutput.appendLine(
-    `[Devory] Execution preference: ${EXECUTION_PREFERENCE_LABELS[chosenPreference]}`
-  );
-  runOutput.appendLine(`[Devory] ${runTargetSummary}`);
-  if (binding.target_fallback_taken) {
-    runOutput.appendLine(
-      `[Devory] Fallback: ${binding.target_fallback_reason ?? "preferred concrete target unavailable."}`
-    );
-  } else if (binding.adapter_fallback_taken || binding.adapter_fallback_reason) {
-    runOutput.appendLine(
-      `[Devory] Adapter: ${binding.adapter_fallback_reason ?? "adapter fallback taken."}`
-    );
+  for (const line of runDecisionSummary.split("\n")) {
+    runOutput.appendLine(`[Devory] ${line}`);
   }
 
   // Compact routing record — shows selected vs. actual before the run starts
@@ -613,7 +649,8 @@ export async function runStartCommand(
   });
 
   if (!started.started) {
-    appendFinalOutcome("blocked", started.reason);
-    vscode.window.showInformationMessage(`Devory: ${started.reason}`);
+    const startFailureReason = started.reason;
+    appendFinalOutcome("blocked", startFailureReason);
+    vscode.window.showInformationMessage(`Devory: ${startFailureReason}`);
   }
 }

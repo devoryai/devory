@@ -136,63 +136,6 @@
       "notes": "Thin adapter around the official GitHub Copilot CLI for single-stage implementation runs."
     },
     {
-      "model_id": "qwen2.5-coder:14b",
-      "provider": "ollama",
-      "display_name": "Qwen 2.5 Coder 14B (Ollama)",
-      "enabled": true,
-      "capabilities": [
-        "coding",
-        "refactoring",
-        "testing",
-        "documentation",
-        "debugging",
-        "long-context-analysis"
-      ],
-      "preferred_task_types": [
-        "feature",
-        "bugfix",
-        "review",
-        "refactor",
-        "subtask"
-      ],
-      "context_window": 131072,
-      "cost_tier": "free",
-      "speed_tier": "medium",
-      "quality_tier": "high",
-      "fallback_eligible": true,
-      "execution_modes": [
-        "ollama"
-      ],
-      "notes": "Higher-capacity self-hosted coding model for local Ollama-backed implementation runs."
-    },
-    {
-      "model_id": "deepseek-coder:6.7b",
-      "provider": "ollama",
-      "display_name": "DeepSeek Coder 6.7B (Ollama)",
-      "enabled": true,
-      "capabilities": [
-        "coding",
-        "testing",
-        "documentation",
-        "debugging"
-      ],
-      "preferred_task_types": [
-        "bugfix",
-        "test",
-        "documentation",
-        "subtask"
-      ],
-      "context_window": 65536,
-      "cost_tier": "free",
-      "speed_tier": "fast",
-      "quality_tier": "standard",
-      "fallback_eligible": true,
-      "execution_modes": [
-        "ollama"
-      ],
-      "notes": "Smaller self-hosted fallback coding model for local Ollama-backed implementation runs."
-    },
-    {
       "model_id": "qwen2.5-coder:7b",
       "provider": "ollama",
       "display_name": "Qwen 2.5 Coder 7B (Ollama)",

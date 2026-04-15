@@ -8,6 +8,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { parseFrontmatter } from "@devory/core";
+import { readExecutionOutcomeLedger } from "./execution-outcome-summary.js";
 import { listTasksInStage, type TaskSummary } from "./task-reader.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -38,6 +39,19 @@ export interface ShowWorkData {
   latestHeartbeat: HeartbeatRecord | null;
   /** True if the heartbeat was written within the last 10 minutes. */
   isHeartbeatFresh: boolean;
+  routingTruth: RoutingTruthRecord | null;
+}
+
+export interface RoutingTruthRecord {
+  runId: string | null;
+  taskIds: string[];
+  selectedRoute: string | null;
+  actualRoute: string | null;
+  status: string | null;
+  reason: string | null;
+  fallbackTaken: boolean;
+  decompositionRecommended: boolean;
+  recordedAt: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -93,6 +107,71 @@ export function readLatestHeartbeat(artifactsDir: string): {
   }
 }
 
+function formatRoute(
+  providerClass: string | null,
+  targetId: string | null,
+  adapterId: string | null
+): string | null {
+  if (!providerClass && !targetId && !adapterId) {
+    return null;
+  }
+
+  const parts = [providerClass ?? "unknown"];
+  if (targetId) {
+    parts.push(`-> ${targetId}`);
+  }
+  if (adapterId) {
+    parts.push(`via ${adapterId}`);
+  }
+  return parts.join(" ");
+}
+
+function pickLatestRoutingTruthRecord(
+  artifactsDir: string,
+  activeRunId: string | null
+): RoutingTruthRecord | null {
+  const ledgerPath = path.join(
+    artifactsDir,
+    "routing-outcomes",
+    "execution-outcomes.jsonl"
+  );
+  const ledger = readExecutionOutcomeLedger(ledgerPath);
+  if (ledger.records.length === 0) {
+    return null;
+  }
+
+  const matchingRecord =
+    activeRunId !== null
+      ? [...ledger.records]
+          .reverse()
+          .find((record) => record.run_id === activeRunId) ?? null
+      : null;
+  const record = matchingRecord ?? ledger.records[ledger.records.length - 1] ?? null;
+  if (!record) {
+    return null;
+  }
+
+  return {
+    runId: record.run_id,
+    taskIds: record.task_ids,
+    selectedRoute: formatRoute(
+      record.selected_provider_class,
+      record.selected_target_id,
+      record.selected_adapter_id
+    ),
+    actualRoute: formatRoute(
+      record.actual_provider_class,
+      record.actual_target_id,
+      record.actual_adapter_id
+    ),
+    status: record.run_result_status,
+    reason: record.fallback_reason ?? record.failure_reason,
+    fallbackTaken: record.fallback_taken,
+    decompositionRecommended: record.decomposition_recommended === true,
+    recordedAt: record.recorded_at,
+  };
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /** Aggregate all data needed to render the Show Work panel. */
@@ -110,8 +189,18 @@ export function readShowWorkData(
 
   const { record: latestHeartbeat, isFresh: isHeartbeatFresh } =
     readLatestHeartbeat(artifactsDir);
+  const routingTruth = pickLatestRoutingTruthRecord(
+    artifactsDir,
+    latestHeartbeat?.run_id ?? null
+  );
 
-  return { doingTasks, reviewTasks, latestHeartbeat, isHeartbeatFresh };
+  return {
+    doingTasks,
+    reviewTasks,
+    latestHeartbeat,
+    isHeartbeatFresh,
+    routingTruth,
+  };
 }
 
 /** Format a timestamp as a short relative string, e.g. "3 min ago". */

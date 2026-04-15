@@ -4,7 +4,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 
-import { resolveTasksDir } from "../lib/task-paths.js";
+import { resolveTaskMutationRoot, resolveTasksDir } from "../lib/task-paths.js";
 
 let tempRoot = "";
 
@@ -48,5 +48,35 @@ describe("resolveTasksDir", () => {
 
     const resolved = resolveTasksDir(tempRoot);
     assert.equal(resolved, path.join(governanceRepo, "tasks"));
+  });
+});
+
+describe("resolveTaskMutationRoot", () => {
+  test("returns local workspace root when governance is not configured", () => {
+    const resolved = resolveTaskMutationRoot(tempRoot);
+    assert.equal(resolved, tempRoot);
+  });
+
+  test("returns governance repo root when governance mode is on", () => {
+    const governanceRepo = path.join(tempRoot, "governance");
+
+    writeJson(path.join(tempRoot, ".devory", "feature-flags.json"), {
+      governance_repo_enabled: true,
+    });
+    writeJson(path.join(tempRoot, ".devory", "governance.json"), {
+      schema_version: "1",
+      governance_repo_path: governanceRepo,
+      workspace_id: "task-mutation-root-test",
+      bound_working_repo: tempRoot,
+      bound_at: new Date().toISOString(),
+    });
+    writeJson(path.join(governanceRepo, ".devory-governance", "config.json"), {
+      schema_version: "1",
+      workspace_id: "task-mutation-root-test",
+      created_at: new Date().toISOString(),
+    });
+
+    const resolved = resolveTaskMutationRoot(tempRoot);
+    assert.equal(resolved, governanceRepo);
   });
 });

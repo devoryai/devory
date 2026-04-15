@@ -20,9 +20,11 @@ export interface TextEditorLike {
 
 export interface TaskCreateWorkflowDeps {
   factoryRoot: string;
+  taskRoot?: string;
   createTaskImpl?: typeof createTask;
   openTextDocument?: (filePath: string) => Promise<TextDocumentLike>;
   showTextDocument?: (document: TextDocumentLike) => Promise<TextEditorLike>;
+  onCreated?: () => void;
 }
 
 export type TaskCreateWorkflowResult =
@@ -45,7 +47,10 @@ export async function runTaskCreateWorkflow(
   deps: TaskCreateWorkflowDeps
 ): Promise<TaskCreateWorkflowResult> {
   const createTaskImpl = deps.createTaskImpl ?? createTask;
-  const creation = createTaskImpl(args, { factoryRoot: deps.factoryRoot, dryRun: false });
+  const creation = createTaskImpl(args, {
+    factoryRoot: deps.taskRoot ?? deps.factoryRoot,
+    dryRun: false,
+  });
   if (!creation.ok) {
     return { ok: false, error: creation.error };
   }
@@ -66,6 +71,8 @@ export async function runTaskCreateWorkflow(
       openedInEditor = false;
     }
   }
+
+  deps.onCreated?.();
 
   return {
     ok: true,

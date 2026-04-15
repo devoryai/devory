@@ -52,6 +52,7 @@ The summary reader currently supports:
 - total records summarized
 - selected provider class counts
 - actual provider class counts
+- selected-versus-actual drift count
 - concrete target counts
 - fallback count
 - blocked count
