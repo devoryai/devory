@@ -29,11 +29,11 @@ shared interfaces (`@devory/core`, `@devory/cli`).
 2. **Install the .vsix in VS Code**:
    - Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
    - Run **"Extensions: Install from VSIX..."**
-   - Select `packages/vscode/devory-vscode-0.4.7.vsix`
+   - Select `packages/vscode/devory-vscode-0.4.8.vsix`
 
    Or from the terminal:
    ```sh
-   code --install-extension packages/vscode/devory-vscode-0.4.7.vsix
+   code --install-extension packages/vscode/devory-vscode-0.4.8.vsix
    ```
 
 3. **Reload VS Code** when prompted.
@@ -96,7 +96,7 @@ All commands are available from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift
 |---|---|
 | **Devory: List Tasks** | Show all tasks grouped by lifecycle stage. Click to open the task file. |
 | **Devory: Create Task** | Interactive prompt to create a new task skeleton in `tasks/backlog/`. |
-| **Devory: Generate Tasks from Idea** | Deterministically generate one or more task drafts from a short idea, preview before save, then commit accepted drafts to backlog. |
+| **Devory: Generate Tasks from Idea** | Opens the Task Builder webview. Describe work in plain English, generate Devory-standard draft markdown, preview it, and save to `tasks/backlog/`. Optional controls: split into smaller tasks, include/exclude acceptance criteria and verification. |
 | **Devory: Move Task** | Pick a task and a target stage; moves it through the shared workspace API exported by `@devory/cli`. |
 | **Devory: Promote Task** | Promote `backlog -> ready`, `ready -> doing`, or `doing -> review` through the shared lifecycle helper. |
 | **Devory: Open Review Queue** | Open a review task quickly from the editor. |

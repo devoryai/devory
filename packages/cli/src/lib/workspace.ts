@@ -205,6 +205,29 @@ export type CreateTaskResult =
   | { ok: true; filePath: string; content: string }
   | { ok: false; error: string };
 
+function resolveTaskMutationRoot(factoryRoot: string): string {
+  const { flags } = loadFeatureFlags(factoryRoot);
+  if (!flags.governance_repo_enabled) {
+    return factoryRoot;
+  }
+
+  const bindingPath = path.join(factoryRoot, ".devory", "governance.json");
+  if (!fs.existsSync(bindingPath)) {
+    return factoryRoot;
+  }
+
+  try {
+    const binding = JSON.parse(fs.readFileSync(bindingPath, "utf-8")) as GovernanceRepoBinding;
+    const governanceRepoPath =
+      typeof binding.governance_repo_path === "string"
+        ? binding.governance_repo_path.trim()
+        : "";
+    return governanceRepoPath.length > 0 ? governanceRepoPath : factoryRoot;
+  } catch {
+    return factoryRoot;
+  }
+}
+
 /**
  * Create a new task skeleton file in `{factoryRoot}/tasks/backlog/`.
  *
@@ -217,20 +240,21 @@ export function createTask(
   options: { factoryRoot: string; dryRun?: boolean }
 ): CreateTaskResult {
   const { factoryRoot, dryRun = false } = options;
+  const taskMutationRoot = resolveTaskMutationRoot(factoryRoot);
   const content = buildTaskSkeleton({
     ...args,
     repo_area: args.repoArea,
     goal: args.goal,
   });
   const filename = buildTaskFilename(args.id, args.title);
-  const targetDir = path.join(factoryRoot, "tasks", "backlog");
+  const targetDir = path.join(taskMutationRoot, "tasks", "backlog");
   const filePath = path.join(targetDir, filename);
 
   if (!dryRun) {
     if (fs.existsSync(filePath)) {
       return {
         ok: false,
-        error: `File already exists: ${path.relative(factoryRoot, filePath)}. Choose a different --id or remove the existing file.`,
+        error: `File already exists: ${path.relative(taskMutationRoot, filePath)}. Choose a different --id or remove the existing file.`,
       };
     }
     try {

@@ -9,8 +9,17 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { spawn } from "child_process";
+import {
+  buildProviderDoctorSnapshot,
+  buildProviderTargetRegistry,
+  buildRegistryFromEnvironment,
+  detectTargetReadiness,
+  probeOllamaReadiness,
+  resolveRoutingPolicy,
+} from "@devory/core";
 import { findDevoryCli } from "../lib/find-devory-cli.js";
 import { buildCliSpawnEnv } from "../lib/cli-spawn-env.js";
+import { renderProviderReadinessLines } from "../lib/provider-readiness-output.js";
 
 interface SpawnResult {
   exitCode: number;
@@ -69,6 +78,62 @@ export async function factoryDoctorCommand(
   doctorOutput.appendLine("[Devory] Starting doctor diagnostics…");
   doctorOutput.appendLine(`[Devory] Workspace: ${factoryRoot}`);
   doctorOutput.appendLine("[Devory] Resolving CLI (local node_modules → monorepo walk-up → PATH)…");
+
+  try {
+    const env = process.env as Record<string, string | undefined>;
+    const { policy } = resolveRoutingPolicy(factoryRoot);
+    const initialRegistry = buildRegistryFromEnvironment(
+      env,
+      policy ? policy.cloud_allowed && !policy.local_only : true
+    );
+    const initialTargetRegistry = buildProviderTargetRegistry({
+      policy,
+      provider_registry: initialRegistry,
+      env,
+    });
+    const ollamaProbe = await probeOllamaReadiness({
+      env,
+      timeout_ms: 1200,
+    });
+    const readiness = detectTargetReadiness({
+      env,
+      policy,
+      target_ids: initialTargetRegistry.map((entry) => entry.id),
+      configured_target_ids: initialTargetRegistry
+        .filter((entry) => entry.configured)
+        .map((entry) => entry.id),
+      ollama_probe: ollamaProbe,
+    });
+    const registry = buildRegistryFromEnvironment(
+      env,
+      policy ? policy.cloud_allowed && !policy.local_only : true,
+      readiness
+    );
+    const targetRegistry = buildProviderTargetRegistry({
+      policy,
+      provider_registry: registry,
+      env,
+      readiness,
+    });
+    const snapshot = buildProviderDoctorSnapshot({
+      env,
+      policy,
+      readiness,
+      target_registry: targetRegistry,
+      ollama_probe: ollamaProbe,
+    });
+    for (const line of renderProviderReadinessLines(snapshot)) {
+      doctorOutput.appendLine(`[Devory] ${line}`);
+    }
+    doctorOutput.appendLine("");
+  } catch (error) {
+    doctorOutput.appendLine(
+      `[Devory] Provider readiness precheck failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    doctorOutput.appendLine("");
+  }
 
   let bin: string;
   try {

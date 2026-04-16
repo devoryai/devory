@@ -20,9 +20,7 @@ import {
 } from "./lib/capabilities.js";
 import { taskListCommand } from "./commands/task-list.js";
 import { taskCreateCommand } from "./commands/task-create.js";
-import {
-  generateTasksFromIdeaCommand,
-} from "./commands/task-generate-from-idea.js";
+import { openTaskBuilderPanel } from "./commands/task-builder-webview.js";
 import { taskMoveCommand } from "./commands/task-move.js";
 import { taskPromoteCommand } from "./commands/task-promote.js";
 import { taskReviewCommand } from "./commands/task-review.js";
@@ -50,10 +48,9 @@ import {
   formatGovernanceStatusBarText,
   formatGovernanceStatusSummary,
 } from "./lib/governance-status.js";
-import { resolveTasksDir } from "./lib/task-paths.js";
+import { resolveTaskMutationRoot, resolveTasksDir } from "./lib/task-paths.js";
 import { resolveActiveEditorTask } from "./lib/task-target.js";
-import { LIFECYCLE_STAGES, findTaskById, type LifecycleStage, type TaskSummary } from "./lib/task-reader.js";
-import { buildPostCommitActions, selectFirstCommittedTask } from "./lib/post-commit-handoff.js";
+import { findTaskById, type TaskSummary } from "./lib/task-reader.js";
 import { StageItem, TaskItem } from "./providers/task-tree.js";
 import {
   shouldShowBootstrap,
@@ -109,22 +106,16 @@ export function activate(context: vscode.ExtensionContext): void {
   // ── Task Tree View ────────────────────────────────────────────────────────
   const treeProvider = new TaskTreeProvider(resolveTasksDir(factoryRoot));
 
-  const treeView = vscode.window.createTreeView("devoryTaskExplorer", {
-    treeDataProvider: treeProvider,
-    showCollapseAll: true,
-  });
-
-  context.subscriptions.push(treeView);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider("devoryTaskExplorer", treeProvider)
+  );
 
   // ── Factory Tree View (Doctrine + Skills) ─────────────────────────────────
   const factoryTreeProvider = new FactoryTreeProvider(factoryRoot);
 
-  const factoryTreeView = vscode.window.createTreeView("devoryFactoryExplorer", {
-    treeDataProvider: factoryTreeProvider,
-    showCollapseAll: false,
-  });
-
-  context.subscriptions.push(factoryTreeView);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider("devoryFactoryExplorer", factoryTreeProvider)
+  );
 
   // ── Task Assistant Webview View ───────────────────────────────────────────
   const taskAssistantProvider = new TaskAssistantProvider();
@@ -146,24 +137,10 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
-  // Update assistant when a task is selected in the tree.
-  context.subscriptions.push(
-    treeView.onDidChangeSelection((e) => {
-      const selected = e.selection[0];
-      if (selected instanceof TaskItem) {
-        taskAssistantProvider.setTask(selected.task);
-      } else if (!selected) {
-        // Selection cleared — fall back to the active editor.
-        const tasksDir = resolveTasksDir(getFactoryRoot());
-        taskAssistantProvider.setTask(resolveActiveEditorTask(tasksDir));
-      }
-    })
-  );
-
-  // Register the focus command.
+  // Repurpose the old assistant entry point into lightweight task drafting.
   context.subscriptions.push(
     vscode.commands.registerCommand("devory.focusTaskAssistant", () => {
-      void vscode.commands.executeCommand("devoryTaskAssistant.focus");
+      void vscode.commands.executeCommand("devory.generateTasksFromIdea");
     })
   );
 
@@ -299,7 +276,11 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      taskCreateCommand(root);
+      void taskCreateCommand(
+        root,
+        resolveTaskMutationRoot(root),
+        () => treeProvider.refresh()
+      );
     })
   );
 
@@ -312,118 +293,22 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(blockedMessage);
         return;
       }
-      void generateTasksFromIdeaCommand(
-        root,
-        () => treeProvider.refresh(),
-        async (committed) => {
-          const latestRoot = getFactoryRoot();
-          const latestTasksDir = resolveTasksDir(latestRoot);
+      openTaskBuilderPanel(root, (committed) => {
+        treeProvider.refresh();
 
-          treeProvider.refresh();
-
-          const committedWithTask = committed.map((entry, index) => {
-            const task = findTaskById(latestTasksDir, entry.task_id);
-            return {
-              entry,
-              task,
-              candidate: {
-                taskId: entry.task_id,
-                stage: task?.stage ?? toLifecycleStage(entry.target_stage),
-                commitIndex: index,
-              },
-            };
+        // Reveal first committed task in explorer as a convenience.
+        const latestTasksDir = resolveTasksDir(getFactoryRoot());
+        const firstTask = committed.length > 0
+          ? findTaskById(latestTasksDir, committed[0].task_id)
+          : null;
+        if (firstTask) {
+          void revealTaskInExplorer(treeProvider, treeView, firstTask).then((revealed) => {
+            if (!revealed) {
+              taskAssistantProvider.setTask(firstTask);
+            }
           });
-
-          const selectedCandidate = selectFirstCommittedTask(
-            committedWithTask.map((value) => value.candidate)
-          );
-
-          const selected = selectedCandidate
-            ? committedWithTask.find((value) => value.entry.task_id === selectedCandidate.taskId)
-            : undefined;
-          const selectedTask = selected?.task ?? null;
-
-          if (selectedTask) {
-            const revealed = await revealTaskInExplorer(treeProvider, treeView, selectedTask);
-            if (!revealed) {
-              taskAssistantProvider.setTask(selectedTask);
-            }
-          }
-
-          const firstRunnable = committedWithTask.find((value) => value.task?.stage === "ready")?.task ?? null;
-          const selectionText = selectedTask
-            ? `${selectedTask.id} (${selectedTask.stage})`
-            : selectedCandidate
-              ? `${selectedCandidate.taskId} (${selectedCandidate.stage ?? "unknown"})`
-              : "none";
-          const runnableText = firstRunnable ? `${firstRunnable.id}` : "none";
-
-          const actions = buildPostCommitActions(selectedTask?.stage ?? selectedCandidate?.stage ?? null);
-          const picked = await vscode.window.showQuickPick(
-            actions.map((action) => ({
-              label: action.label,
-              detail: action.detail,
-              action,
-            })),
-            {
-              title:
-                `Devory: ${committed.length} committed · selected ${selectionText} · runnable now ${runnableText}`,
-              placeHolder: "Choose the next step",
-              ignoreFocusOut: true,
-            }
-          );
-
-          if (!picked) return;
-
-          if (picked.action.id === "open-show-work") {
-            await vscode.commands.executeCommand("devory.showWork");
-            return;
-          }
-
-          if (!selectedTask) {
-            vscode.window.showInformationMessage(
-              "Devory: committed tasks were saved, but no task could be resolved in Task Explorer yet."
-            );
-            return;
-          }
-
-          if (picked.action.id === "reveal-task") {
-            const revealed = await revealTaskInExplorer(treeProvider, treeView, selectedTask);
-            if (!revealed) {
-              taskAssistantProvider.setTask(selectedTask);
-            }
-            return;
-          }
-
-          if (selectedTask.stage === "backlog") {
-            vscode.window.showInformationMessage(
-              `Devory: ${selectedTask.id} is in backlog. Promote it to ready before running.`
-            );
-            await vscode.commands.executeCommand("devory.taskPromote", selectedTask);
-          }
-
-          const refreshedTask = findTaskById(resolveTasksDir(getFactoryRoot()), selectedTask.id);
-          if (!refreshedTask || refreshedTask.stage !== "ready") {
-            const stageLabel = refreshedTask?.stage ?? "unknown";
-            vscode.window.showInformationMessage(
-              `Devory: ${selectedTask.id} is ${stageLabel}. Move it to ready to run.`
-            );
-            return;
-          }
-
-          await revealTaskInExplorer(treeProvider, treeView, refreshedTask);
-          taskAssistantProvider.setTask(refreshedTask);
-
-          await vscode.commands.executeCommand("devory.runStart");
-          const openShowWork = await vscode.window.showInformationMessage(
-            `Devory: run start requested for ${refreshedTask.id}. Open Show Work?`,
-            "Open Show Work"
-          );
-          if (openShowWork === "Open Show Work") {
-            await vscode.commands.executeCommand("devory.showWork");
-          }
         }
-      );
+      });
     })
   );
 
@@ -817,12 +702,6 @@ function syncCapabilityContext(factoryRoot: string, runtimeRoot: string): void {
   );
 }
 
-function toLifecycleStage(value: string | null | undefined): LifecycleStage | null {
-  if (!value) return null;
-  return (LIFECYCLE_STAGES as readonly string[]).includes(value)
-    ? (value as LifecycleStage)
-    : null;
-}
 
 async function revealTaskInExplorer(
   treeProvider: TaskTreeProvider,

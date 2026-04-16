@@ -521,10 +521,11 @@ package.
 - `Devory: Create Task`
   Prompts for metadata and writes a backlog task.
 - `Devory: Generate Tasks from Idea`
-  Deterministically expands a short intent into one or more task drafts, shows a
-  preview-before-save picker, and commits accepted drafts to `tasks/backlog/`.
-  After commit, the extension offers post-commit handoff actions:
-  `Run first task`, `Reveal in Task Explorer`, or `Open Show Work`.
+  Opens an on-demand Task Builder webview. Enter a description in plain English,
+  choose optional controls (split into smaller tasks, include acceptance criteria,
+  include verification), generate a Devory-standard draft, preview the raw
+  markdown, and save to `tasks/backlog/`. After saving, the task tree refreshes
+  and the first committed task is revealed in the explorer.
 - `Devory: Move Task`
   Explicit lifecycle move picker.
 - `Devory: Promote Task`
@@ -554,9 +555,8 @@ package.
   Inserts `Depends On` only if absent.
 - `Devory: Add Files Likely Affected`
   Inserts that section only if absent.
-- `Devory: Open Task Assistant`
-  Opens the task-side assistant webview for AI-assisted refinement and context
-  checks while keeping edits explicit and operator-controlled.
+- `Devory: Draft Task`
+  Alias for `Devory: Generate Tasks from Idea`. Opens the Task Builder webview.
 
 These commands modify the open task file directly. They do not regenerate or
 rewrite existing sections.

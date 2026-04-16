@@ -3,7 +3,10 @@ import type {
   ProviderTargetEntry,
   ProviderTargetAdapterId,
 } from "./provider-target-resolver.ts";
-import type { TargetReadinessState } from "./target-readiness.ts";
+import {
+  isReadinessSelectable,
+  type TargetReadinessState,
+} from "./target-readiness.ts";
 
 export type ExecutionAdapterId =
   | "deterministic"
@@ -115,6 +118,11 @@ export function resolveExecutionAdapter(
   const mapped = TARGET_ADAPTERS[target.id];
 
   if (!mapped) {
+    const selectable = isReadinessSelectable(readinessState);
+    const blockedByPolicy =
+      readinessState === "blocked_by_policy" ||
+      (target.provider_class === "cloud_premium" &&
+        Boolean(options.policy && (options.policy.local_only || !options.policy.cloud_allowed)));
     return {
       target_id: target.id,
       target_model_id: target.model_id,
@@ -150,9 +158,23 @@ export function resolveExecutionAdapter(
               ? "packaged_runner:claude"
               : "packaged_runner:openai",
       configured: target.configured,
-      available: false,
-      reason: buildUnsupportedReason(target, readinessState),
-      note: null,
+      available: selectable && !blockedByPolicy,
+      reason:
+        selectable && !blockedByPolicy
+          ? null
+          : buildUnsupportedReason(target, readinessState),
+      note:
+        selectable && !blockedByPolicy
+          ? `Resolved dynamically onto the packaged ${
+              target.provider_class === "deterministic"
+                ? "dry-run"
+                : target.provider_class === "local_ollama"
+                  ? "Ollama"
+                  : target.model_id?.startsWith("claude")
+                    ? "Claude"
+                    : "OpenAI"
+            } lane.`
+          : null,
     };
   }
 

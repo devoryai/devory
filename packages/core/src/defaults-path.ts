@@ -9,6 +9,8 @@ export function resolveCoreDefaultsDir(moduleDir: string): string {
   const candidates = [
     path.join(moduleDir, "defaults"),
     path.join(moduleDir, "..", "src", "defaults"),
+    path.join(moduleDir, "..", "packages", "core", "src", "defaults"),
+    path.join(moduleDir, "..", "..", "packages", "core", "src", "defaults"),
   ];
 
   for (const candidate of candidates) {

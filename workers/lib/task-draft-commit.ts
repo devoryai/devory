@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  loadFeatureFlags,
   renderTaskDraftTarget,
   toPlanningDraftValidationRecord,
   type TaskPlanningDraft,
@@ -49,6 +50,29 @@ interface PreparedTaskDraftCommit {
 }
 
 const TASK_STAGE_DIRS = ["backlog", "ready", "doing", "review", "blocked", "archived", "done"] as const;
+
+function resolveTaskMutationRoot(factoryRoot: string): string {
+  const { flags } = loadFeatureFlags(factoryRoot);
+  if (!flags.governance_repo_enabled) {
+    return factoryRoot;
+  }
+
+  const bindingPath = path.join(factoryRoot, ".devory", "governance.json");
+  if (!fs.existsSync(bindingPath)) {
+    return factoryRoot;
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(bindingPath, "utf-8")) as {
+      governance_repo_path?: unknown;
+    };
+    return typeof parsed.governance_repo_path === "string" && parsed.governance_repo_path.trim().length > 0
+      ? parsed.governance_repo_path.trim()
+      : factoryRoot;
+  } catch {
+    return factoryRoot;
+  }
+}
 
 function buildBacklogCommitDraft(draft: TaskPlanningDraft): TaskPlanningDraft {
   const { inferred_fields: _inferredFields, ...persistableDraft } = draft;
@@ -145,6 +169,7 @@ export function commitTaskDrafts(
   options: { factoryRoot: string }
 ): TaskDraftCommitResult {
   const { factoryRoot } = options;
+  const taskMutationRoot = resolveTaskMutationRoot(factoryRoot);
   const { prepared, normalizedDrafts, issues } = prepareTaskDraftCommits(drafts);
 
   if (issues.length > 0) {
@@ -185,7 +210,7 @@ export function commitTaskDrafts(
 
   const conflictIssues: TaskDraftCommitIssue[] = [];
   for (const entry of prepared) {
-    const absoluteTargetPath = path.join(factoryRoot, entry.targetPath);
+    const absoluteTargetPath = path.join(taskMutationRoot, entry.targetPath);
     if (fs.existsSync(absoluteTargetPath)) {
       conflictIssues.push({
         draft_id: entry.draft.draft_id,
@@ -196,14 +221,14 @@ export function commitTaskDrafts(
       continue;
     }
 
-    const existingTaskPath = findTaskPathById(factoryRoot, entry.taskId);
+    const existingTaskPath = findTaskPathById(taskMutationRoot, entry.taskId);
     if (existingTaskPath) {
       conflictIssues.push({
         draft_id: entry.draft.draft_id,
         task_id: entry.taskId,
         target_path: entry.targetPath,
         errors: [
-          `Task id already exists at ${path.relative(factoryRoot, existingTaskPath).replace(/\\/g, "/")}.`,
+          `Task id already exists at ${path.relative(taskMutationRoot, existingTaskPath).replace(/\\/g, "/")}.`,
         ],
       });
     }
@@ -220,7 +245,7 @@ export function commitTaskDrafts(
   }
 
   for (const entry of prepared) {
-    const absoluteTargetPath = path.join(factoryRoot, entry.targetPath);
+    const absoluteTargetPath = path.join(taskMutationRoot, entry.targetPath);
     fs.mkdirSync(path.dirname(absoluteTargetPath), { recursive: true });
     fs.writeFileSync(absoluteTargetPath, entry.markdown, "utf-8");
   }

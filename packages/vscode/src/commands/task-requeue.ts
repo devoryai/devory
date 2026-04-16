@@ -8,6 +8,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { listTasksInStage } from "../lib/task-reader.js";
 import { runTaskRequeueWorkflow } from "../lib/task-control.js";
+import { resolveTaskMutationRoot } from "../lib/task-paths.js";
 import { resolveActiveEditorTask, resolveTaskTarget, type TaskCommandTarget } from "../lib/task-target.js";
 
 export async function taskRequeueCommand(
@@ -25,7 +26,8 @@ export async function taskRequeueCommand(
 
   const directTarget = resolveTaskTarget(tasksDir, target) ?? resolveActiveEditorTask(tasksDir);
   if (directTarget) {
-    const relPath = path.relative(factoryRoot, directTarget.filepath).replace(/\\/g, "/");
+    const mutationRoot = resolveTaskMutationRoot(factoryRoot);
+    const relPath = path.relative(mutationRoot, directTarget.filepath).replace(/\\/g, "/");
     const toStage =
       directTarget.stage === "archived"
         ? await vscode.window.showQuickPick([{ label: "backlog" }, { label: "ready" }], {
@@ -82,7 +84,8 @@ export async function taskRequeueCommand(
 
   if (!pickedTask?.detail) return;
 
-  const relPath = path.relative(factoryRoot, pickedTask.detail).replace(/\\/g, "/");
+  const mutationRoot = resolveTaskMutationRoot(factoryRoot);
+  const relPath = path.relative(mutationRoot, pickedTask.detail).replace(/\\/g, "/");
   const fromStage = tasks.find((task) => task.filepath === pickedTask.detail)?.stage ?? "blocked";
   const toStage =
     fromStage === "archived"

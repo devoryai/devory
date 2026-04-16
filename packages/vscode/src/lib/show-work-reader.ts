@@ -7,8 +7,17 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import {
+  buildProviderDoctorSnapshot,
+  buildProviderTargetRegistry,
+  buildRegistryFromEnvironment,
+  resolveRoutingPolicy,
+  type ProviderDoctorReachability,
+  type RoutingPolicy,
+} from "@devory/core";
 import { parseFrontmatter } from "@devory/core";
 import { readExecutionOutcomeLedger } from "./execution-outcome-summary.js";
+import { getRunById } from "./run-reader.js";
 import { listTasksInStage, type TaskSummary } from "./task-reader.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -33,6 +42,15 @@ export interface TaskWithExtras extends TaskSummary {
   filesLikelyAffected: string[];
 }
 
+export interface ProviderReadinessItem {
+  label: string;
+  supportLevel: string;
+  configured: boolean;
+  reachable: ProviderDoctorReachability;
+  routeable: boolean;
+  summary: string;
+}
+
 export interface ShowWorkData {
   doingTasks: TaskWithExtras[];
   reviewTasks: TaskWithExtras[];
@@ -40,6 +58,10 @@ export interface ShowWorkData {
   /** True if the heartbeat was written within the last 10 minutes. */
   isHeartbeatFresh: boolean;
   routingTruth: RoutingTruthRecord | null;
+  providerReadiness: ProviderReadinessItem[];
+  lastRunSummary: LastRunSummary | null;
+  failureSummary: FailureSummary | null;
+  recentActivity: ActivityItem[];
 }
 
 export interface RoutingTruthRecord {
@@ -52,6 +74,27 @@ export interface RoutingTruthRecord {
   fallbackTaken: boolean;
   decompositionRecommended: boolean;
   recordedAt: string;
+}
+
+export interface LastRunSummary {
+  taskCount: number;
+  primaryProvider: string;
+  result: "Completed" | "Partial" | "Failed";
+  fallbackOccurred: boolean;
+  recordedAt: string;
+}
+
+export interface FailureSummary {
+  reason: string;
+  attempted: string | null;
+  failedAt: string;
+  fallback: string;
+}
+
+export interface ActivityItem {
+  label: string;
+  detail: string;
+  recordedAt: string | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -126,6 +169,222 @@ function formatRoute(
   return parts.join(" ");
 }
 
+function normalizeSentence(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    return null;
+  }
+
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function formatProviderDisplay(route: RoutingTruthRecord | null, fallback = "Unknown"): string {
+  if (route?.actualRoute) {
+    return route.actualRoute;
+  }
+  if (route?.selectedRoute) {
+    return route.selectedRoute;
+  }
+  return fallback;
+}
+
+function deriveLastRunResult(input: {
+  status: string | null;
+  reviewCount: number;
+  failureCount: number;
+  taskCount: number;
+}): LastRunSummary["result"] {
+  if (input.status === "completed" && input.failureCount === 0 && input.reviewCount === 0) {
+    return "Completed";
+  }
+
+  if (
+    input.status === "failed" ||
+    input.status === "blocked" ||
+    input.status === "cancelled"
+  ) {
+    return input.taskCount > 0 ? "Partial" : "Failed";
+  }
+
+  if (input.reviewCount > 0 || input.failureCount > 0 || input.status === "no-op") {
+    return "Partial";
+  }
+
+  return "Completed";
+}
+
+function buildLastRunSummary(
+  routingTruth: RoutingTruthRecord | null,
+  runRecord: ReturnType<typeof getRunById>
+): LastRunSummary | null {
+  if (!routingTruth && !runRecord) {
+    return null;
+  }
+
+  const runSummary = runRecord?.routing_ledger.run_summary;
+  const taskCount =
+    runSummary?.tasks_executed_count ??
+    runRecord?.tasks_executed.length ??
+    routingTruth?.taskIds.length ??
+    0;
+  const failureCount = runSummary?.failure_count ?? 0;
+  const reviewCount = runSummary?.review_count ?? 0;
+  const primaryProvider =
+    runSummary?.models_used[0] ??
+    runSummary?.providers_used[0] ??
+    formatProviderDisplay(routingTruth);
+
+  return {
+    taskCount,
+    primaryProvider,
+    result: deriveLastRunResult({
+      status: routingTruth?.status ?? null,
+      reviewCount,
+      failureCount,
+      taskCount,
+    }),
+    fallbackOccurred:
+      (runSummary?.fallback_count ?? 0) > 0 || routingTruth?.fallbackTaken === true,
+    recordedAt: routingTruth?.recordedAt ?? runRecord?.end_time ?? runRecord?.start_time ?? "",
+  };
+}
+
+function buildFailureSummary(
+  routingTruth: RoutingTruthRecord | null,
+  runRecord: ReturnType<typeof getRunById>
+): FailureSummary | null {
+  const status = routingTruth?.status ?? null;
+  if (status !== "failed" && status !== "blocked" && status !== "cancelled") {
+    return null;
+  }
+
+  const failureReason =
+    normalizeSentence(
+      routingTruth?.reason ??
+        runRecord?.failure?.reason ??
+        (status === "blocked"
+          ? "No valid execution target available"
+          : status === "cancelled"
+            ? "Execution stopped before completion"
+            : "Execution stopped due to provider error")
+    ) ?? "Execution stopped.";
+
+  const attempted = routingTruth?.selectedRoute ?? routingTruth?.actualRoute ?? null;
+  const actualRoute = routingTruth?.actualRoute ?? null;
+  const fallback =
+    routingTruth?.fallbackTaken && routingTruth?.selectedRoute && actualRoute
+      ? `Attempted ${routingTruth.selectedRoute} -> fell back to ${actualRoute} -> ${status === "cancelled" ? "stopped" : "failed"}.`
+      : routingTruth?.fallbackTaken && actualRoute
+        ? `Fallback attempted via ${actualRoute}.`
+        : "No fallback available under current policy.";
+
+  const failedAt =
+    status === "blocked"
+      ? normalizeSentence(
+          runRecord?.failure?.reason
+            ? `Launch was blocked: ${runRecord.failure.reason}`
+            : "Execution was blocked before launch"
+        ) ?? "Execution was blocked before launch."
+      : normalizeSentence(
+          actualRoute ? `Execution stopped on ${actualRoute}` : "Execution stopped after launch"
+        ) ?? "Execution stopped after launch.";
+
+  return {
+    reason: failureReason,
+    attempted,
+    failedAt,
+    fallback,
+  };
+}
+
+function buildRecentActivity(
+  heartbeat: HeartbeatRecord | null,
+  routingTruth: RoutingTruthRecord | null,
+  runRecord: ReturnType<typeof getRunById>
+): ActivityItem[] {
+  const items: ActivityItem[] = [];
+
+  if (heartbeat?.recent_event_summary) {
+    items.push({
+      label: "Live",
+      detail: heartbeat.recent_event_summary,
+      recordedAt: heartbeat.last_heartbeat_at ?? heartbeat.started_at ?? null,
+    });
+  }
+
+  const recentProgress = [...(runRecord?.progress_events ?? [])]
+    .sort((a, b) => a.sequence - b.sequence)
+    .slice(-3);
+  for (const event of recentProgress) {
+    items.push({
+      label: "Run Output",
+      detail: event.summary,
+      recordedAt: event.created_at,
+    });
+  }
+
+  if (routingTruth?.reason) {
+    items.push({
+      label: "Outcome",
+      detail: routingTruth.reason,
+      recordedAt: routingTruth.recordedAt,
+    });
+  }
+
+  const unique: ActivityItem[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    const key = `${item.label}:${item.detail}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(item);
+  }
+
+  return unique.slice(-4).reverse();
+}
+
+function readProviderReadiness(factoryRoot: string): ProviderReadinessItem[] {
+  const env = process.env as Record<string, string | undefined>;
+  let policy: RoutingPolicy | undefined;
+  try {
+    policy = resolveRoutingPolicy(factoryRoot).policy;
+  } catch {
+    policy = undefined;
+  }
+
+  const providerRegistry = buildRegistryFromEnvironment(
+    env,
+    policy ? policy.cloud_allowed && !policy.local_only : true
+  );
+  const targetRegistry = buildProviderTargetRegistry({
+    env,
+    policy,
+    provider_registry: providerRegistry,
+  });
+  const snapshot = buildProviderDoctorSnapshot({
+    env,
+    policy,
+    target_registry: targetRegistry,
+  });
+
+  return snapshot.providers
+    .filter((row) => row.support_level !== "unsupported")
+    .map((row) => ({
+      label: row.label,
+      supportLevel: row.support_level,
+      configured: row.configured,
+      reachable: row.reachable,
+      routeable: row.routeable,
+      summary: row.routeable ? row.routeable_detail : row.summary,
+    }));
+}
+
 function pickLatestRoutingTruthRecord(
   artifactsDir: string,
   activeRunId: string | null
@@ -150,6 +409,12 @@ function pickLatestRoutingTruthRecord(
   if (!record) {
     return null;
   }
+  const reason =
+    record.run_result_status === "failed" ||
+    record.run_result_status === "blocked" ||
+    record.run_result_status === "cancelled"
+      ? record.failure_reason ?? record.fallback_reason
+      : record.fallback_reason ?? record.failure_reason;
 
   return {
     runId: record.run_id,
@@ -165,7 +430,7 @@ function pickLatestRoutingTruthRecord(
       record.actual_adapter_id
     ),
     status: record.run_result_status,
-    reason: record.fallback_reason ?? record.failure_reason,
+    reason,
     fallbackTaken: record.fallback_taken,
     decompositionRecommended: record.decomposition_recommended === true,
     recordedAt: record.recorded_at,
@@ -193,6 +458,10 @@ export function readShowWorkData(
     artifactsDir,
     latestHeartbeat?.run_id ?? null
   );
+  const providerReadiness = readProviderReadiness(path.dirname(tasksDir));
+  const runsDir = path.join(path.dirname(tasksDir), "runs");
+  const runRecord =
+    routingTruth?.runId ? getRunById(runsDir, routingTruth.runId) : null;
 
   return {
     doingTasks,
@@ -200,6 +469,10 @@ export function readShowWorkData(
     latestHeartbeat,
     isHeartbeatFresh,
     routingTruth,
+    providerReadiness,
+    lastRunSummary: buildLastRunSummary(routingTruth, runRecord),
+    failureSummary: buildFailureSummary(routingTruth, runRecord),
+    recentActivity: buildRecentActivity(latestHeartbeat, routingTruth, runRecord),
   };
 }
 

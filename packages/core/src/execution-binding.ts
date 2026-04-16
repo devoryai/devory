@@ -426,6 +426,119 @@ function buildBindingSummary(
   return parts.join(" · ");
 }
 
+interface ProviderBindingResolution {
+  target_resolution: ResolvedProviderTarget | null;
+  selected_adapter: ReturnType<typeof resolveExecutionAdapter>;
+  actual_adapter: ReturnType<typeof resolveExecutionAdapter>;
+  adapter_fallback_taken: boolean;
+  adapter_fallback_reason: string | null;
+  adapter_resolution_note: string | null;
+  adapter_blocked: boolean;
+}
+
+function canUseAdapterWithoutConcreteTarget(
+  providerClass: ProviderClassId,
+  resolution: ResolvedProviderTarget,
+  options: BindExecutionOptions
+): boolean {
+  if (providerClass === "cloud_premium") {
+    return (
+      resolution.preferred_target?.readiness_state !== "blocked_by_policy" &&
+      (resolution.preferred_target?.readiness_state !== "unavailable" ||
+        resolution.preferred_target?.readiness_detail ===
+          "Target not configured for this workspace.")
+    );
+  }
+
+  if (providerClass === "local_ollama") {
+    return !options.readiness;
+  }
+
+  return false;
+}
+
+function resolveProviderBindingResolution(
+  providerClass: ProviderClassId,
+  options: BindExecutionOptions,
+  providerRegistry: ExecutionRoutingDecision[],
+  taskProfile: TaskProfile | undefined,
+  taskMeta: Record<string, unknown> | null | undefined
+): ProviderBindingResolution {
+  const targetResolution = resolveProviderTarget(providerClass, {
+    policy: options.policy,
+    task_profile: taskProfile,
+    task_meta: taskMeta,
+    provider_registry: providerRegistry.map((decision) => decision.selected_provider),
+    readiness: options.readiness,
+  });
+  const selectedAdapter = resolveExecutionAdapter({
+    target: targetResolution.preferred_target,
+    readiness_state: targetResolution.preferred_target?.readiness_state,
+    policy: options.policy,
+  });
+  const actualAdapterCandidate = resolveExecutionAdapter({
+    target: targetResolution.actual_target,
+    readiness_state: targetResolution.readiness_state,
+    policy: options.policy,
+  });
+  const actualAdapter =
+    actualAdapterCandidate ??
+    (targetResolution.actual_target === null &&
+    selectedAdapter !== null &&
+    selectedAdapter.available &&
+    canUseAdapterWithoutConcreteTarget(providerClass, targetResolution, options)
+      ? selectedAdapter
+      : null);
+  const adapterFallbackTaken =
+    selectedAdapter !== null &&
+    actualAdapter !== null &&
+    selectedAdapter.adapter_id !== actualAdapter.adapter_id;
+  const adapterCanProceedWithoutConcreteTarget =
+    targetResolution.actual_target === null &&
+    canUseAdapterWithoutConcreteTarget(providerClass, targetResolution, options);
+  const adapterTargetResolved =
+    targetResolution.actual_target != null ||
+    targetResolution.preferred_target != null;
+  const adapterBlocked =
+    adapterTargetResolved &&
+    !adapterCanProceedWithoutConcreteTarget &&
+    (actualAdapter === null || actualAdapter.available === false);
+  const adapterFallbackReason =
+    adapterBlocked
+      ? actualAdapter?.reason ?? "No runnable execution adapter path exists."
+      : adapterFallbackTaken
+        ? `Selected adapter "${selectedAdapter?.adapter_id ?? "unknown"}" changed to "${actualAdapter?.adapter_id ?? "unknown"}".`
+        : null;
+
+  return {
+    target_resolution: targetResolution,
+    selected_adapter: selectedAdapter,
+    actual_adapter: actualAdapter,
+    adapter_fallback_taken: adapterFallbackTaken,
+    adapter_fallback_reason: adapterFallbackReason,
+    adapter_resolution_note: actualAdapter?.note ?? selectedAdapter?.note ?? null,
+    adapter_blocked: adapterBlocked,
+  };
+}
+
+function bindingResolutionRunnable(
+  providerClass: ProviderClassId,
+  resolution: ProviderBindingResolution,
+  options: BindExecutionOptions
+): boolean {
+  if (resolution.actual_adapter?.available) return true;
+  return (
+    resolution.target_resolution !== null &&
+    canUseAdapterWithoutConcreteTarget(
+      providerClass,
+      resolution.target_resolution,
+      options
+    ) &&
+    resolution.target_resolution?.actual_target === null &&
+    resolution.selected_adapter?.available === true
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -474,40 +587,18 @@ export function bindExecution(
       originallyTargeted,
       preference
     );
-    const targetResolution = resolveProviderTarget(d.selected_provider.id, {
-      policy,
-      task_profile: options.task_profiles?.[i],
-      task_meta: options.task_metas?.[i] as Record<string, unknown> | null | undefined,
-      provider_registry: decisions.map((decision) => decision.selected_provider),
-      readiness: options.readiness,
-    });
-    const selectedAdapter = resolveExecutionAdapter({
-      target: targetResolution.preferred_target,
-      readiness_state: targetResolution.preferred_target?.readiness_state,
-      policy,
-    });
-    const actualAdapterCandidate = resolveExecutionAdapter({
-      target: targetResolution.actual_target,
-      readiness_state: targetResolution.readiness_state,
-      policy,
-    });
-    const actualAdapter =
-      actualAdapterCandidate ??
-      (targetResolution.actual_target === null &&
-      selectedAdapter !== null &&
-      selectedAdapter.available
-        ? selectedAdapter
-        : null);
-    const adapterFallbackTaken =
-      selectedAdapter !== null &&
-      actualAdapter !== null &&
-      selectedAdapter.adapter_id !== actualAdapter.adapter_id;
-    const adapterFallbackReason =
-      actualAdapter?.available === false
-        ? actualAdapter.reason
-        : adapterFallbackTaken
-          ? `Selected adapter "${selectedAdapter?.adapter_id ?? "unknown"}" changed to "${actualAdapter?.adapter_id ?? "unknown"}".`
-          : null;
+    const providerResolution = resolveProviderBindingResolution(
+      d.selected_provider.id,
+      options,
+      decisions,
+      options.task_profiles?.[i],
+      options.task_metas?.[i] as Record<string, unknown> | null | undefined
+    );
+    const targetResolution = providerResolution.target_resolution;
+    const selectedAdapter = providerResolution.selected_adapter;
+    const actualAdapter = providerResolution.actual_adapter;
+    const adapterFallbackTaken = providerResolution.adapter_fallback_taken;
+    const adapterFallbackReason = providerResolution.adapter_fallback_reason;
 
     return {
       task_index: i,
@@ -527,7 +618,7 @@ export function bindExecution(
         : null,
       adapter_fallback_taken: adapterFallbackTaken,
       adapter_fallback_reason: adapterFallbackReason,
-      adapter_resolution_note: actualAdapter?.note ?? selectedAdapter?.note ?? null,
+      adapter_resolution_note: providerResolution.adapter_resolution_note,
       target_fallback_taken: targetResolution.fallback_taken,
       target_readiness_state: targetResolution.readiness_state,
       target_readiness_detail: targetResolution.readiness_detail,
@@ -551,21 +642,6 @@ export function bindExecution(
       runLevelOriginallyTargeted = resolveOriginallyTargeted(firstFallbackDecision, preference);
     }
   }
-
-  // Detect force_local violation: preference is force_local, any task fell back to non-local
-  const forceLocalViolated =
-    preference === "force_local" &&
-    perTaskBindings.some(
-      (t) => t.fallback_taken && t.selected_provider_class !== "local_ollama"
-    );
-
-  // Determine run-level execution path
-  const runExecutionPath = resolveExecutionPath(
-    dominantClass,
-    anyFallback,
-    runLevelOriginallyTargeted,
-    preference
-  );
 
   // Decomposition: aggregate across tasks
   const anyDecomposition = decisions.some((d) => d.decomposition_recommended);
@@ -615,9 +691,119 @@ export function bindExecution(
     }
   }
 
-  // Build warnings
+  // Dominant route mode (from first decision, or synthetic)
+  const dominantRouteMode = decisions[0]?.route_mode ?? "unbound";
+  const dominantTaskIndex = decisions.findIndex(
+    (decision) => decision.selected_provider.id === dominantClass
+  );
+  const dominantTaskProfile =
+    dominantTaskIndex >= 0
+      ? options.task_profiles?.[dominantTaskIndex]
+      : options.task_profiles?.[0];
+  const dominantTaskMeta =
+    dominantTaskIndex >= 0
+      ? (options.task_metas?.[dominantTaskIndex] as Record<string, unknown> | null | undefined)
+      : (options.task_metas?.[0] as Record<string, unknown> | null | undefined);
+
+  const dominantResolution =
+    decisions.length > 0
+      ? resolveProviderBindingResolution(
+          dominantClass,
+          options,
+          decisions,
+          dominantTaskProfile,
+          dominantTaskMeta
+        )
+      : null;
+  const dominantRunnable =
+    dominantResolution !== null
+      ? bindingResolutionRunnable(dominantClass, dominantResolution, options)
+      : false;
+  const cloudFallbackAllowed = Boolean(
+    !policy?.local_only &&
+      policy?.cloud_allowed !== false &&
+      policy?.allow_fallback_to_cloud !== false
+  );
+  const cloudFallbackResolution =
+    decisions.length > 0 &&
+    dominantClass === "local_ollama" &&
+    !dominantRunnable &&
+    preference !== "force_local" &&
+    cloudFallbackAllowed
+      ? resolveProviderBindingResolution(
+          "cloud_premium",
+          options,
+          decisions,
+          dominantTaskProfile,
+          dominantTaskMeta
+        )
+      : null;
+  const cloudFallbackRunnable =
+    cloudFallbackResolution !== null
+      ? bindingResolutionRunnable("cloud_premium", cloudFallbackResolution, options)
+      : false;
+  const reboundToCloud = cloudFallbackRunnable;
+  const effectiveProviderClass = reboundToCloud ? "cloud_premium" : dominantClass;
+  const effectiveResolution =
+    (reboundToCloud ? cloudFallbackResolution : dominantResolution) ?? null;
+  const targetResolution = effectiveResolution?.target_resolution ?? null;
+  const selectedAdapter = effectiveResolution?.selected_adapter ?? null;
+  const actualAdapter = effectiveResolution?.actual_adapter ?? null;
+  const adapterFallbackTaken = effectiveResolution?.adapter_fallback_taken ?? false;
+  const adapterBlocked = effectiveResolution?.adapter_blocked ?? false;
+  const adapterFallbackReason = effectiveResolution?.adapter_fallback_reason ?? null;
+  const bindingLevelFallbackTaken = reboundToCloud;
+  const fallbackTaken = anyFallback || bindingLevelFallbackTaken;
+  const effectiveOriginallyTargeted =
+    runLevelOriginallyTargeted ?? (bindingLevelFallbackTaken ? dominantClass : null);
   const warnings: string[] = [];
 
+  if (targetResolution) {
+    for (const warning of targetResolution.warnings) {
+      if (!warnings.includes(warning)) {
+        warnings.push(warning);
+      }
+    }
+  }
+  if (adapterFallbackReason && !warnings.includes(adapterFallbackReason)) {
+    warnings.push(adapterFallbackReason);
+  }
+
+  const forceLocalViolated =
+    preference === "force_local" &&
+    (effectiveProviderClass !== "local_ollama" ||
+      !bindingResolutionRunnable("local_ollama", dominantResolution ?? {
+        target_resolution: null,
+        selected_adapter: null,
+        actual_adapter: null,
+        adapter_fallback_taken: false,
+        adapter_fallback_reason: null,
+        adapter_resolution_note: null,
+        adapter_blocked: true,
+      }, options));
+
+  if (
+    !blockedByPolicy &&
+    dominantClass === "local_ollama" &&
+    !dominantRunnable &&
+    !forceLocalViolated &&
+    !cloudFallbackRunnable &&
+    !cloudFallbackAllowed &&
+    (policy?.cloud_allowed === false || policy?.allow_fallback_to_cloud === false || policy?.local_only)
+  ) {
+    blockedByPolicy = true;
+    policyBlockReason =
+      policy?.local_only || policy?.cloud_allowed === false
+        ? "Local execution is unavailable and cloud execution is blocked by policy."
+        : "Cloud fallback is disabled by policy (allow_fallback_to_cloud=false). Local execution is unavailable.";
+  }
+
+  const runExecutionPath = resolveExecutionPath(
+    effectiveProviderClass,
+    fallbackTaken,
+    effectiveOriginallyTargeted,
+    preference
+  );
   if (forceLocalViolated) {
     warnings.push(
       "Force local was selected, but no local provider (Ollama) is available. " +
@@ -626,12 +812,15 @@ export function bindExecution(
     );
   } else if (blockedByPolicy && policyBlockReason) {
     warnings.push(`Blocked by routing policy: ${policyBlockReason}`);
-  } else if (anyFallback && preference === "prefer_local") {
-    const reason = "Local model (Ollama) is unavailable; routing fell back to cloud.";
-    warnings.push(reason);
-  } else if (anyFallback) {
+  } else if (fallbackTaken && effectiveOriginallyTargeted === "local_ollama") {
     warnings.push(
-      `Intended provider is unavailable; routing fell back to ${dominantClass}.`
+      effectiveProviderClass === "cloud_premium"
+        ? "Local model (Ollama) is unavailable; binding selected a viable cloud fallback."
+        : "Local model (Ollama) is unavailable."
+    );
+  } else if (fallbackTaken && effectiveOriginallyTargeted !== null) {
+    warnings.push(
+      `Intended provider is unavailable; routing fell back to ${effectiveProviderClass}.`
     );
   }
 
@@ -649,7 +838,6 @@ export function bindExecution(
     );
   }
 
-  // Collect routing warnings from decisions
   for (const d of decisions) {
     for (const w of d.warnings) {
       if (!warnings.includes(w)) {
@@ -658,91 +846,24 @@ export function bindExecution(
     }
   }
 
-  // Fallback reason
   let fallbackReason: string | null = null;
   if (forceLocalViolated) {
     fallbackReason =
       "force_local preference active but local_ollama is not available";
   } else if (blockedByPolicy) {
     fallbackReason = policyBlockReason;
-  } else if (anyFallback && runLevelOriginallyTargeted === "local_ollama") {
+  } else if (fallbackTaken && effectiveOriginallyTargeted === "local_ollama") {
     fallbackReason = "Local model (Ollama) not available";
-  } else if (anyFallback && runLevelOriginallyTargeted !== null) {
-    fallbackReason = `Provider '${runLevelOriginallyTargeted}' not available`;
-  }
-
-  // Dominant route mode (from first decision, or synthetic)
-  const dominantRouteMode = decisions[0]?.route_mode ?? "unbound";
-  const dominantTaskIndex = decisions.findIndex(
-    (decision) => decision.selected_provider.id === dominantClass
-  );
-  const targetResolution =
-    decisions.length > 0
-      ? resolveProviderTarget(dominantClass, {
-          policy,
-          task_profile:
-            dominantTaskIndex >= 0
-              ? options.task_profiles?.[dominantTaskIndex]
-              : options.task_profiles?.[0],
-          task_meta:
-            dominantTaskIndex >= 0
-              ? (options.task_metas?.[dominantTaskIndex] as Record<string, unknown> | null | undefined)
-              : (options.task_metas?.[0] as Record<string, unknown> | null | undefined),
-          provider_registry: decisions.map((decision) => decision.selected_provider),
-          readiness: options.readiness,
-        })
-      : null;
-  const selectedAdapter = resolveExecutionAdapter({
-    target: targetResolution?.preferred_target ?? null,
-    readiness_state: targetResolution?.preferred_target?.readiness_state,
-    policy,
-  });
-  const actualAdapterCandidate = resolveExecutionAdapter({
-    target: targetResolution?.actual_target ?? null,
-    readiness_state: targetResolution?.readiness_state,
-    policy,
-  });
-  const actualAdapter =
-    actualAdapterCandidate ??
-    (targetResolution?.actual_target === null &&
-    selectedAdapter !== null &&
-    selectedAdapter.available
-      ? selectedAdapter
-      : null);
-  const adapterFallbackTaken =
-    selectedAdapter !== null &&
-    actualAdapter !== null &&
-    selectedAdapter.adapter_id !== actualAdapter.adapter_id;
-  const adapterTargetResolved =
-    targetResolution?.actual_target != null ||
-    (targetResolution?.preferred_target != null && selectedAdapter?.available === false);
-  const adapterBlocked =
-    adapterTargetResolved &&
-    (actualAdapter === null || actualAdapter.available === false);
-  const adapterFallbackReason =
-    adapterBlocked
-      ? actualAdapter?.reason ?? "No runnable execution adapter path exists."
-      : adapterFallbackTaken
-        ? `Selected adapter "${selectedAdapter?.adapter_id ?? "unknown"}" changed to "${actualAdapter?.adapter_id ?? "unknown"}".`
-        : null;
-
-  if (targetResolution) {
-    for (const warning of targetResolution.warnings) {
-      if (!warnings.includes(warning)) {
-        warnings.push(warning);
-      }
-    }
-  }
-  if (adapterFallbackReason && !warnings.includes(adapterFallbackReason)) {
-    warnings.push(adapterFallbackReason);
+  } else if (fallbackTaken && effectiveOriginallyTargeted !== null) {
+    fallbackReason = `Provider '${effectiveOriginallyTargeted}' not available`;
   }
 
   const bindingSummary = buildBindingSummary(
-    dominantClass,
+    effectiveProviderClass,
     adapterBlocked ? "unavailable_stopped" : runExecutionPath,
     preference,
-    anyFallback,
-    runLevelOriginallyTargeted,
+    fallbackTaken,
+    effectiveOriginallyTargeted,
     targetResolution?.actual_target?.id ?? null,
     actualAdapter?.available ? actualAdapter.adapter_id : null,
     actualAdapter?.available ? actualAdapter.execution_path : null,
@@ -767,18 +888,18 @@ export function bindExecution(
   const fallbackCause: "none" | "readiness" | "policy" | "config" =
     blockedByPolicy
       ? "policy"
-      : anyFallback
+      : fallbackTaken
         ? "readiness"
         : targetFallbackCause !== "none"
           ? targetFallbackCause
           : "none";
 
   return {
-    selected_provider_class: dominantClass,
+    selected_provider_class: effectiveProviderClass,
     execution_path: adapterBlocked ? "unavailable_stopped" : runExecutionPath,
     preference_applied: preference,
-    fallback_taken: anyFallback,
-    originally_targeted_class: runLevelOriginallyTargeted,
+    fallback_taken: fallbackTaken,
+    originally_targeted_class: effectiveOriginallyTargeted,
     fallback_reason: fallbackReason,
     force_local_violated: forceLocalViolated,
     warnings,

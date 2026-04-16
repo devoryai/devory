@@ -214,7 +214,7 @@ function mapRunResultStatus(input: {
       return "completed";
     }
     if (input.runRecord.status === "paused_for_review") {
-      return "blocked";
+      return "completed";
     }
     if (
       input.runRecord.status === "failed" &&
@@ -249,14 +249,24 @@ function resolveFailureReason(input: {
   if (input.runRecord?.failure?.reason) {
     return input.runRecord.failure.reason;
   }
-  if (input.failureReason && input.failureReason.trim() !== "") {
-    return input.failureReason.trim();
-  }
   if (input.signal) {
     return `Process killed by signal ${input.signal}`;
   }
   if ((input.exitCode ?? 0) !== 0) {
+    if (input.failureReason && input.failureReason.trim() !== "") {
+      return input.failureReason.trim();
+    }
     return `Process exited with code ${input.exitCode ?? 1}`;
+  }
+  if (
+    input.runRecord &&
+    (input.runRecord.status === "completed" ||
+      input.runRecord.status === "paused_for_review")
+  ) {
+    return null;
+  }
+  if (input.failureReason && input.failureReason.trim() !== "") {
+    return input.failureReason.trim();
   }
   return null;
 }

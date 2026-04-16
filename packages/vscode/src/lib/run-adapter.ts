@@ -58,6 +58,10 @@ export function resolvePackagedRunInvocation(
     runnerArgs.push("--limit", String(args.limit));
   }
 
+  const resolvedEngine =
+    args.routingEnv?.DEVORY_ADAPTER_INVOCATION_MODE?.trim() ||
+    process.env.FACTORY_DEFAULT_ENGINE;
+
   return {
     command: process.execPath,
     args: runnerArgs,
@@ -66,9 +70,10 @@ export function resolvePackagedRunInvocation(
       ...process.env,
       DEVORY_FACTORY_ROOT: factoryRoot,
       DEVORY_RUNTIME_ROOT: runtimeRoot,
-      FACTORY_DEFAULT_ENGINE:
-        args.routingEnv?.DEVORY_ADAPTER_INVOCATION_MODE?.trim() ||
-        process.env.FACTORY_DEFAULT_ENGINE,
+      FACTORY_DEFAULT_ENGINE: resolvedEngine,
+      // Keep local Ollama endpoint context explicit through the packaged handoff.
+      OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
+      OLLAMA_HOST: process.env.OLLAMA_HOST,
       // Routing binding env vars (from execution binding layer).
       // Injected so the orchestrator can honor the routing decision where supported.
       // Keys are DEVORY_PROVIDER_CLASS, DEVORY_EXECUTION_PATH, etc.

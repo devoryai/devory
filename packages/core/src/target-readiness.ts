@@ -14,6 +14,7 @@
  */
 
 import type { RoutingPolicy } from "./routing-policy.ts";
+import * as fs from "node:fs";
 
 export type TargetReadinessState =
   | "ready"
@@ -58,10 +59,43 @@ export interface ProbeOllamaReadinessOptions {
 }
 
 const OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434";
+const OLLAMA_FALLBACK_BASE_URLS = [
+  OLLAMA_DEFAULT_BASE_URL,
+  "http://127.0.0.1:11434",
+  "http://host.docker.internal:11434",
+] as const;
 
 function trimEnv(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function normalizeOllamaBaseUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  if (/^https?:\/\//.test(raw)) {
+    return raw.replace(/\/$/, "");
+  }
+  return `http://${raw.replace(/\/$/, "")}`;
+}
+
+function resolveWslBridgeBaseUrl(
+  env: Record<string, string | undefined>
+): string | null {
+  const explicitHostIp = trimEnv(env.OLLAMA_HOST_IP);
+  if (explicitHostIp) {
+    return normalizeOllamaBaseUrl(`${explicitHostIp}:11434`);
+  }
+
+  const runningInWsl = Boolean(trimEnv(env.WSL_INTEROP) ?? trimEnv(env.WSL_DISTRO_NAME));
+  if (!runningInWsl) return null;
+
+  try {
+    const resolvConf = fs.readFileSync("/etc/resolv.conf", "utf-8");
+    const nameserver = resolvConf.match(/^nameserver\s+([0-9.]+)\s*$/m)?.[1]?.trim();
+    return normalizeOllamaBaseUrl(nameserver ? `${nameserver}:11434` : null);
+  } catch {
+    return null;
+  }
 }
 
 function inferTargetProviderClass(
@@ -257,52 +291,40 @@ export function isReadinessSelectable(
 export function resolveOllamaBaseUrl(
   env: Record<string, string | undefined> = process.env as Record<string, string | undefined>
 ): string {
-  const explicitBaseUrl = trimEnv(env.OLLAMA_BASE_URL);
-  if (explicitBaseUrl) return explicitBaseUrl.replace(/\/$/, "");
-
-  const host = trimEnv(env.OLLAMA_HOST);
-  if (host) {
-    if (/^https?:\/\//.test(host)) {
-      return host.replace(/\/$/, "");
-    }
-    return `http://${host.replace(/\/$/, "")}`;
-  }
-
-  return OLLAMA_DEFAULT_BASE_URL;
+  return resolveOllamaBaseUrlCandidates(env)[0] ?? OLLAMA_DEFAULT_BASE_URL;
 }
 
-export async function probeOllamaReadiness(
-  options: ProbeOllamaReadinessOptions = {}
+export function resolveOllamaBaseUrlCandidates(
+  env: Record<string, string | undefined> = process.env as Record<string, string | undefined>
+): string[] {
+  const candidates = [
+    normalizeOllamaBaseUrl(trimEnv(env.OLLAMA_BASE_URL)),
+    normalizeOllamaBaseUrl(trimEnv(env.OLLAMA_HOST)),
+    resolveWslBridgeBaseUrl(env),
+    ...OLLAMA_FALLBACK_BASE_URLS,
+  ].filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(candidates));
+}
+
+async function probeSingleOllamaBaseUrl(
+  baseUrl: string,
+  timeoutMs: number,
+  fetchFn: typeof fetch
 ): Promise<OllamaProbeResult> {
-  const env =
-    options.env ??
-    (process.env as Record<string, string | undefined>);
-  const baseUrl = (options.base_url ?? resolveOllamaBaseUrl(env)).replace(/\/$/, "");
-  const timeoutMs = options.timeout_ms ?? 1200;
-  const fetchFn = options.fetch_fn ?? globalThis.fetch;
-
-  if (typeof fetchFn !== "function") {
-    return {
-      base_url: baseUrl,
-      reachable: false,
-      status: null,
-      models: null,
-      detail: "Fetch API is not available for Ollama probing.",
-    };
-  }
-
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetchFn(`${baseUrl}/api/tags`, {
+    const response = await fetchFn(`${normalizedBaseUrl}/api/tags`, {
       method: "GET",
       signal: controller.signal,
     });
 
     if (!response.ok) {
       return {
-        base_url: baseUrl,
+        base_url: normalizedBaseUrl,
         reachable: false,
         status: response.status,
         models: null,
@@ -324,7 +346,7 @@ export async function probeOllamaReadiness(
       : null;
 
     return {
-      base_url: baseUrl,
+      base_url: normalizedBaseUrl,
       reachable: true,
       status: response.status,
       models,
@@ -341,7 +363,7 @@ export async function probeOllamaReadiness(
           : error.message
         : "Unknown Ollama probe failure.";
     return {
-      base_url: baseUrl,
+      base_url: normalizedBaseUrl,
       reachable: false,
       status: null,
       models: null,
@@ -350,6 +372,50 @@ export async function probeOllamaReadiness(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function probeOllamaReadiness(
+  options: ProbeOllamaReadinessOptions = {}
+): Promise<OllamaProbeResult> {
+  const env =
+    options.env ??
+    (process.env as Record<string, string | undefined>);
+  const baseUrl = (options.base_url ?? resolveOllamaBaseUrl(env)).replace(/\/$/, "");
+  const timeoutMs = options.timeout_ms ?? 1200;
+  const fetchFn = options.fetch_fn ?? globalThis.fetch;
+
+  if (typeof fetchFn !== "function") {
+    return {
+      base_url: options.base_url ?? resolveOllamaBaseUrl(env),
+      reachable: false,
+      status: null,
+      models: null,
+      detail: "Fetch API is not available for Ollama probing.",
+    };
+  }
+  const candidates = options.base_url
+    ? [baseUrl]
+    : resolveOllamaBaseUrlCandidates(env);
+  let firstFailure: OllamaProbeResult | null = null;
+
+  for (const candidate of candidates) {
+    const result = await probeSingleOllamaBaseUrl(candidate, timeoutMs, fetchFn);
+    if (result.reachable) {
+      return result;
+    }
+    firstFailure ??= result;
+  }
+
+  return {
+    base_url: candidates[0] ?? baseUrl,
+    reachable: false,
+    status: firstFailure?.status ?? null,
+    models: null,
+    detail:
+      candidates.length > 1
+        ? `Ollama probe failed for ${candidates.join(", ")}. Last error: ${firstFailure?.detail ?? "unknown failure"}.`
+        : firstFailure?.detail ?? `Ollama probe failed for ${baseUrl}.`,
+  };
 }
 
 export function detectTargetReadiness(

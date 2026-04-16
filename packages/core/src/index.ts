@@ -91,6 +91,19 @@ export type {
   TargetReadinessState,
 } from "./target-readiness.ts";
 export {
+  buildProviderDoctorSnapshot,
+  describeExecutionPreflightBlock,
+} from "./provider-readiness.ts";
+export type {
+  BuildProviderDoctorSnapshotOptions,
+  ExecutionPreflightBlock,
+  ProviderDoctorId,
+  ProviderDoctorReachability,
+  ProviderDoctorRow,
+  ProviderDoctorSnapshot,
+  ProviderSupportLevel,
+} from "./provider-readiness.ts";
+export {
   clearLicenseCache,
   clearLicenseToken,
   detectTier,

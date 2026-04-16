@@ -21,6 +21,9 @@ const packageJson = JSON.parse(
   contributes?: {
     commands?: Array<{ command: string; title: string }>;
     menus?: Record<string, Array<{ command: string; when?: string; group?: string }>>;
+    views?: {
+      explorer?: Array<{ id: string; name: string; type?: string }>;
+    };
   };
 };
 
@@ -44,6 +47,10 @@ function commandTitle(commandId: string): string {
   );
 }
 
+function explorerViewIds(): string[] {
+  return (packageJson.contributes?.views?.explorer ?? []).map((entry) => entry.id);
+}
+
 describe("VS Code contribution placement", () => {
   test("contributes governance status command", () => {
     const commands = contributedCommands();
@@ -54,13 +61,21 @@ describe("VS Code contribution placement", () => {
     assert.ok(commands.includes("devory.sweepWorkshop"));
   });
 
-  test("activates when any Devory sidebar view is opened", () => {
+  test("activates when core Devory sidebar views are opened", () => {
     const activationEvents = packageJson.activationEvents ?? [];
     assert.ok(activationEvents.includes("onStartupFinished"));
     assert.ok(activationEvents.includes("onView:devoryTaskExplorer"));
     assert.ok(activationEvents.includes("onView:devoryFactoryExplorer"));
     assert.ok(activationEvents.includes("onView:devoryShowWork"));
-    assert.ok(activationEvents.includes("onView:devoryTaskAssistant"));
+    assert.equal(activationEvents.includes("onView:devoryTaskAssistant"), false);
+  });
+
+  test("keeps the explorer focused on tasks, governance, and show work", () => {
+    const viewIds = explorerViewIds();
+    assert.ok(viewIds.includes("devoryTaskExplorer"));
+    assert.ok(viewIds.includes("devoryFactoryExplorer"));
+    assert.ok(viewIds.includes("devoryShowWork"));
+    assert.equal(viewIds.includes("devoryTaskAssistant"), false);
   });
 
   test("keeps generation and visibility terminology consistent", () => {

@@ -33,6 +33,8 @@ import {
   buildExecutionBindingEnv,
   buildRegistryFromEnvironment,
   buildProviderTargetRegistry,
+  buildProviderDoctorSnapshot,
+  describeExecutionPreflightBlock,
   detectTargetReadiness,
   detectOllamaConfigured,
   probeOllamaReadiness,
@@ -54,6 +56,7 @@ import {
   type ExecutionOutcomeRecord,
 } from "../lib/execution-outcome.js";
 import { renderRunDecisionSummary } from "../lib/run-decision-summary.js";
+import { renderProviderReadinessLines } from "../lib/provider-readiness-output.js";
 import { getRunById } from "../lib/run-reader.js";
 import { listTasksInStage } from "../lib/task-reader.js";
 
@@ -178,6 +181,19 @@ export async function runStartCommand(
     cloudAllowed,
     readiness
   );
+  const readinessTargetRegistry = buildProviderTargetRegistry({
+    policy,
+    provider_registry: envRegistry,
+    env: baseEnv,
+    readiness,
+  });
+  const providerDoctor = buildProviderDoctorSnapshot({
+    env: baseEnv,
+    policy,
+    readiness,
+    target_registry: readinessTargetRegistry,
+    ollama_probe: ollamaProbe,
+  });
   const ollamaReadiness = readiness.provider_classes.local_ollama;
   const cloudReadiness = readiness.provider_classes.cloud_premium;
   if (ollamaReadiness?.state === "configured_but_unverified") {
@@ -192,6 +208,9 @@ export async function runStartCommand(
     cloudReadiness.detail
   ) {
     runOutput.appendLine(`[Devory] Cloud target unavailable: ${cloudReadiness.detail}`);
+  }
+  for (const line of renderProviderReadinessLines(providerDoctor)) {
+    runOutput.appendLine(`[Devory] ${line}`);
   }
 
   // Parse task sources for estimate + routing
@@ -452,13 +471,33 @@ export async function runStartCommand(
   const adapterBlockMsg =
     binding.adapter_fallback_reason ??
     "Preferred target is resolved, but no truthful execution adapter path exists.";
+  const preflightBlock = describeExecutionPreflightBlock(binding, providerDoctor);
+  const preflightModalMessage = preflightBlock
+    ? [
+        "Devory:",
+        runDecisionSummary,
+        "",
+        preflightBlock.title,
+        preflightBlock.detail,
+        ...preflightBlock.suggestions.map((entry) => `- ${entry}`),
+      ].join("\n")
+    : `Devory:\n${runDecisionSummary}`;
 
   // Check for force_local violation — stop the run rather than silently cloud-escalate
   if (binding.force_local_violated) {
-    runOutput.appendLine(`[Devory] ✖ Routing blocked: ${forceLocalStopMsg}`);
-    appendFinalOutcome("blocked", forceLocalStopMsg);
+    const blockMsg = preflightBlock?.detail ?? forceLocalStopMsg;
+    runOutput.appendLine(
+      `[Devory] ✖ Routing blocked: ${preflightBlock?.title ?? forceLocalStopMsg}`
+    );
+    if (preflightBlock) {
+      runOutput.appendLine(`[Devory] ${preflightBlock.detail}`);
+      for (const suggestion of preflightBlock.suggestions) {
+        runOutput.appendLine(`[Devory] Next step: ${suggestion}`);
+      }
+    }
+    appendFinalOutcome("blocked", blockMsg);
     const action = await vscode.window.showWarningMessage(
-      `Devory:\n${runDecisionSummary}`,
+      preflightModalMessage,
       { modal: true },
       "Change Preference",
       "Cancel Run"
@@ -472,10 +511,19 @@ export async function runStartCommand(
 
   // Check for policy block — cloud or fallback disallowed by policy
   if (binding.blocked_by_policy) {
-    runOutput.appendLine(`[Devory] ✖ Policy block: ${policyBlockMsg}`);
-    appendFinalOutcome("blocked", policyBlockMsg);
+    const blockMsg = preflightBlock?.detail ?? policyBlockMsg;
+    runOutput.appendLine(
+      `[Devory] ✖ Policy block: ${preflightBlock?.title ?? policyBlockMsg}`
+    );
+    if (preflightBlock) {
+      runOutput.appendLine(`[Devory] ${preflightBlock.detail}`);
+      for (const suggestion of preflightBlock.suggestions) {
+        runOutput.appendLine(`[Devory] Next step: ${suggestion}`);
+      }
+    }
+    appendFinalOutcome("blocked", blockMsg);
     const action = await vscode.window.showWarningMessage(
-      `Devory:\n${runDecisionSummary}`,
+      preflightModalMessage,
       { modal: true },
       "Change Preference",
       "Cancel Run"
@@ -487,10 +535,19 @@ export async function runStartCommand(
   }
 
   if (!binding.actual_adapter_id || !binding.actual_execution_path) {
-    runOutput.appendLine(`[Devory] ✖ Adapter block: ${adapterBlockMsg}`);
-    appendFinalOutcome("blocked", adapterBlockMsg);
+    const blockMsg = preflightBlock?.detail ?? adapterBlockMsg;
+    runOutput.appendLine(
+      `[Devory] ✖ Preflight block: ${preflightBlock?.title ?? adapterBlockMsg}`
+    );
+    if (preflightBlock) {
+      runOutput.appendLine(`[Devory] ${preflightBlock.detail}`);
+      for (const suggestion of preflightBlock.suggestions) {
+        runOutput.appendLine(`[Devory] Next step: ${suggestion}`);
+      }
+    }
+    appendFinalOutcome("blocked", blockMsg);
     void vscode.window.showWarningMessage(
-      `Devory:\n${runDecisionSummary}`,
+      preflightModalMessage,
       { modal: true }
     );
     return;

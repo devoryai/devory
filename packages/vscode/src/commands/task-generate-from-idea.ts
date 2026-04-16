@@ -145,10 +145,14 @@ function buildMultipleDrafts(description: string, project: string): TaskPlanning
   });
 }
 
-function buildDrafts(description: string, project: string): TaskPlanningDraft[] {
+export function buildDrafts(
+  description: string,
+  project: string,
+  forceSplit?: boolean
+): TaskPlanningDraft[] {
   const intentSpec = normalizeIntent({ description, project });
 
-  if (intentSpec.scope === "broad") {
+  if (forceSplit || intentSpec.scope === "broad") {
     return buildMultipleDrafts(description, project);
   }
 
