@@ -607,8 +607,8 @@ export function bindExecution(
       fallback_taken: taskFallbackTaken,
       decomposition_recommended: d.decomposition_recommended,
       route_mode: d.route_mode,
-      selected_target_id: targetResolution.preferred_target?.id ?? null,
-      actual_target_id: targetResolution.actual_target?.id ?? null,
+      selected_target_id: targetResolution?.preferred_target?.id ?? null,
+      actual_target_id: targetResolution?.actual_target?.id ?? null,
       selected_adapter_id: selectedAdapter?.adapter_id ?? null,
       actual_adapter_id: actualAdapter?.available ? actualAdapter.adapter_id : null,
       adapter_id: actualAdapter?.available ? actualAdapter.adapter_id : null,
@@ -619,9 +619,9 @@ export function bindExecution(
       adapter_fallback_taken: adapterFallbackTaken,
       adapter_fallback_reason: adapterFallbackReason,
       adapter_resolution_note: providerResolution.adapter_resolution_note,
-      target_fallback_taken: targetResolution.fallback_taken,
-      target_readiness_state: targetResolution.readiness_state,
-      target_readiness_detail: targetResolution.readiness_detail,
+      target_fallback_taken: targetResolution?.fallback_taken ?? false,
+      target_readiness_state: targetResolution?.readiness_state ?? "unknown",
+      target_readiness_detail: targetResolution?.readiness_detail ?? null,
       fallback_cause: taskFallbackTaken ? "readiness" : "none",
     };
   });
