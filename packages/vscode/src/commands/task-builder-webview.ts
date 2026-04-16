@@ -75,10 +75,11 @@ export function openTaskBuilderPanel(
 
       case "generate": {
         try {
-          let drafts = buildDrafts(
+          let drafts = await buildDrafts(
             msg.description.trim(),
             msg.project.trim(),
-            msg.splitIntoSmaller
+            msg.splitIntoSmaller,
+            factoryRoot
           );
 
           // Post-process: strip optional sections if user deselected them.

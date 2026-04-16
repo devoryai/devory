@@ -43,6 +43,29 @@ function taskContent(fields: Record<string, string>): string {
     .join("\n")}\n---\n\nTask body.\n`;
 }
 
+function enableGovernance(factoryRoot: string): string {
+  const bindingDir = path.join(factoryRoot, ".devory");
+  const governanceRepo = path.join(factoryRoot, "governance");
+  fs.mkdirSync(path.join(governanceRepo, ".devory-governance"), { recursive: true });
+  fs.writeFileSync(
+    path.join(governanceRepo, ".devory-governance", "config.json"),
+    `${JSON.stringify({ workspace_id: "ws-1" }, null, 2)}\n`,
+    "utf-8",
+  );
+  fs.mkdirSync(bindingDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(bindingDir, "feature-flags.json"),
+    `${JSON.stringify({ governance_repo_enabled: true }, null, 2)}\n`,
+    "utf-8",
+  );
+  fs.writeFileSync(
+    path.join(bindingDir, "governance.json"),
+    `${JSON.stringify({ governance_repo_path: governanceRepo, workspace_id: "ws-1" }, null, 2)}\n`,
+    "utf-8",
+  );
+  return governanceRepo;
+}
+
 describe("checkTransition", () => {
   test("accepts an allowed lifecycle transition", () => {
     assert.deepEqual(checkTransition("backlog", "ready"), { allowed: true });
@@ -104,6 +127,40 @@ describe("createTask", () => {
     assert.equal(result.ok, false);
     if (result.ok) return;
     assert.match(result.error, /File already exists/);
+  });
+
+  test("writes backlog tasks into the governance repo when governance mode is enabled", () => {
+    const bindingDir = path.join(tmpDir, ".devory");
+    const governanceRepo = path.join(tmpDir, "governance");
+    fs.mkdirSync(path.join(governanceRepo, ".devory-governance"), { recursive: true });
+    fs.writeFileSync(
+      path.join(governanceRepo, ".devory-governance", "config.json"),
+      `${JSON.stringify({ workspace_id: "ws-1" }, null, 2)}\n`,
+      "utf-8",
+    );
+    fs.mkdirSync(bindingDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(bindingDir, "feature-flags.json"),
+      `${JSON.stringify({ governance_repo_enabled: true }, null, 2)}\n`,
+      "utf-8",
+    );
+    fs.writeFileSync(
+      path.join(bindingDir, "governance.json"),
+      `${JSON.stringify({ governance_repo_path: governanceRepo, workspace_id: "ws-1" }, null, 2)}\n`,
+      "utf-8",
+    );
+
+    const result = createTask(
+      { id: "factory-130", title: "Governance backlog task", project: "ai-dev-factory" },
+      { factoryRoot: tmpDir }
+    );
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    assert.equal(result.filePath, path.join(governanceRepo, "tasks", "backlog", "factory-130-governance-backlog-task.md"));
+    assert.equal(fs.existsSync(result.filePath), true);
+    assert.equal(fs.existsSync(path.join(tmpDir, "tasks", "backlog", "factory-130-governance-backlog-task.md")), false);
   });
 });
 
@@ -174,6 +231,269 @@ describe("moveTask", () => {
     assert.equal(result.error, "Validation failed");
     assert.deepEqual(result.validationErrors, ['Missing required field: "agent"']);
   });
+
+  test("moves governance-mode tasks within the governance repo", () => {
+    const governanceRepo = enableGovernance(tmpDir);
+    fs.mkdirSync(path.join(governanceRepo, "tasks", "backlog"), { recursive: true });
+
+    const sourcePath = path.join(
+      governanceRepo,
+      "tasks",
+      "backlog",
+      "factory-131-governance-move.md"
+    );
+    fs.writeFileSync(
+      sourcePath,
+      taskContent({
+        id: "factory-131",
+        title: "Governance move",
+        project: "ai-dev-factory",
+        status: "backlog",
+        agent: "backend-builder",
+      }),
+      "utf-8"
+    );
+
+    const result = moveTask(
+      { task: sourcePath, to: "ready" },
+      { factoryRoot: tmpDir }
+    );
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    const expectedReadyPath = path.join(
+      governanceRepo,
+      "tasks",
+      "ready",
+      "factory-131-governance-move.md"
+    );
+    const misplacedWorkingRepoPath = path.join(
+      tmpDir,
+      "tasks",
+      "ready",
+      "factory-131-governance-move.md"
+    );
+
+    assert.equal(result.toPath, expectedReadyPath);
+    assert.equal(fs.existsSync(sourcePath), false);
+    assert.equal(fs.existsSync(expectedReadyPath), true);
+    assert.equal(fs.existsSync(misplacedWorkingRepoPath), false);
+    assert.match(fs.readFileSync(expectedReadyPath, "utf-8"), /status: ready/);
+  });
+
+  test("archives governance-mode tasks within the governance repo", () => {
+    const governanceRepo = enableGovernance(tmpDir);
+    const sourcePath = path.join(
+      governanceRepo,
+      "tasks",
+      "backlog",
+      "factory-133-governance-archive.md"
+    );
+    fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
+    fs.writeFileSync(
+      sourcePath,
+      taskContent({
+        id: "factory-133",
+        title: "Governance archive",
+        project: "ai-dev-factory",
+        status: "backlog",
+        agent: "backend-builder",
+      }),
+      "utf-8"
+    );
+
+    const result = moveTask(
+      { task: sourcePath, to: "archived" },
+      { factoryRoot: tmpDir }
+    );
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    const expectedArchivedPath = path.join(
+      governanceRepo,
+      "tasks",
+      "archived",
+      "factory-133-governance-archive.md"
+    );
+    const misplacedWorkingRepoPath = path.join(
+      tmpDir,
+      "tasks",
+      "archived",
+      "factory-133-governance-archive.md"
+    );
+
+    assert.equal(result.toPath, expectedArchivedPath);
+    assert.equal(fs.existsSync(sourcePath), false);
+    assert.equal(fs.existsSync(expectedArchivedPath), true);
+    assert.equal(fs.existsSync(misplacedWorkingRepoPath), false);
+    assert.match(fs.readFileSync(expectedArchivedPath, "utf-8"), /status: archived/);
+  });
+
+  test("requeues governance-mode archived tasks to backlog within the governance repo", () => {
+    const governanceRepo = enableGovernance(tmpDir);
+    const sourcePath = path.join(
+      governanceRepo,
+      "tasks",
+      "archived",
+      "factory-134-governance-requeue-backlog.md"
+    );
+    fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
+    fs.writeFileSync(
+      sourcePath,
+      taskContent({
+        id: "factory-134",
+        title: "Governance requeue backlog",
+        project: "ai-dev-factory",
+        status: "archived",
+        agent: "backend-builder",
+      }),
+      "utf-8"
+    );
+
+    const result = moveTask(
+      { task: sourcePath, to: "backlog" },
+      { factoryRoot: tmpDir }
+    );
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    const expectedBacklogPath = path.join(
+      governanceRepo,
+      "tasks",
+      "backlog",
+      "factory-134-governance-requeue-backlog.md"
+    );
+    const misplacedWorkingRepoPath = path.join(
+      tmpDir,
+      "tasks",
+      "backlog",
+      "factory-134-governance-requeue-backlog.md"
+    );
+
+    assert.equal(result.toPath, expectedBacklogPath);
+    assert.equal(fs.existsSync(sourcePath), false);
+    assert.equal(fs.existsSync(expectedBacklogPath), true);
+    assert.equal(fs.existsSync(misplacedWorkingRepoPath), false);
+    assert.match(fs.readFileSync(expectedBacklogPath, "utf-8"), /status: backlog/);
+  });
+
+  test("requeues governance-mode archived tasks to ready within the governance repo", () => {
+    const governanceRepo = enableGovernance(tmpDir);
+    const sourcePath = path.join(
+      governanceRepo,
+      "tasks",
+      "archived",
+      "factory-135-governance-requeue-ready.md"
+    );
+    fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
+    fs.writeFileSync(
+      sourcePath,
+      taskContent({
+        id: "factory-135",
+        title: "Governance requeue ready",
+        project: "ai-dev-factory",
+        status: "archived",
+        agent: "backend-builder",
+      }),
+      "utf-8"
+    );
+
+    const result = moveTask(
+      { task: sourcePath, to: "ready" },
+      { factoryRoot: tmpDir }
+    );
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+
+    const expectedReadyPath = path.join(
+      governanceRepo,
+      "tasks",
+      "ready",
+      "factory-135-governance-requeue-ready.md"
+    );
+    const misplacedWorkingRepoPath = path.join(
+      tmpDir,
+      "tasks",
+      "ready",
+      "factory-135-governance-requeue-ready.md"
+    );
+
+    assert.equal(result.toPath, expectedReadyPath);
+    assert.equal(fs.existsSync(sourcePath), false);
+    assert.equal(fs.existsSync(expectedReadyPath), true);
+    assert.equal(fs.existsSync(misplacedWorkingRepoPath), false);
+    assert.match(fs.readFileSync(expectedReadyPath, "utf-8"), /status: ready/);
+  });
+
+  for (const mode of ["working-repo", "governance-repo"] as const) {
+    test(`supports full lifecycle progression through done in ${mode}`, () => {
+      const taskRoot = mode === "governance-repo" ? enableGovernance(tmpDir) : tmpDir;
+      const sourcePath = path.join(
+        taskRoot,
+        "tasks",
+        "backlog",
+        "factory-132-lifecycle-walk.md"
+      );
+      fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
+      fs.writeFileSync(
+        sourcePath,
+        taskContent({
+          id: "factory-132",
+          title: "Lifecycle walk",
+          project: "ai-dev-factory",
+          status: "backlog",
+          agent: "backend-builder",
+        }),
+        "utf-8"
+      );
+
+      const readyResult = moveTask({ task: sourcePath, to: "ready" }, { factoryRoot: tmpDir });
+      assert.equal(readyResult.ok, true);
+      if (!readyResult.ok) return;
+      assert.equal(readyResult.toPath, path.join(taskRoot, "tasks", "ready", "factory-132-lifecycle-walk.md"));
+      assert.match(fs.readFileSync(readyResult.toPath, "utf-8"), /status: ready/);
+
+      const doingResult = moveTask({ task: readyResult.toPath, to: "doing" }, { factoryRoot: tmpDir });
+      assert.equal(doingResult.ok, true);
+      if (!doingResult.ok) return;
+      assert.equal(doingResult.toPath, path.join(taskRoot, "tasks", "doing", "factory-132-lifecycle-walk.md"));
+      assert.match(fs.readFileSync(doingResult.toPath, "utf-8"), /status: doing/);
+
+      const reviewResult = moveTask({ task: doingResult.toPath, to: "review" }, { factoryRoot: tmpDir });
+      assert.equal(reviewResult.ok, true);
+      if (!reviewResult.ok) return;
+      assert.equal(reviewResult.toPath, path.join(taskRoot, "tasks", "review", "factory-132-lifecycle-walk.md"));
+      assert.match(fs.readFileSync(reviewResult.toPath, "utf-8"), /status: review/);
+
+      const doneResult = applyReviewAction(
+        { task: reviewResult.toPath, action: "approve", reason: "Looks good" },
+        { factoryRoot: tmpDir }
+      );
+      assert.equal(doneResult.ok, true);
+      if (!doneResult.ok) return;
+
+      if (mode === "governance-repo") {
+        assert.equal(doneResult.executionMode, "governance-queued");
+        assert.equal(doneResult.fromPath, reviewResult.toPath);
+        assert.equal(doneResult.toPath, reviewResult.toPath);
+        assert.equal(fs.existsSync(reviewResult.toPath), true);
+        assert.equal(
+          fs.existsSync(path.join(taskRoot, "tasks", "done", "factory-132-lifecycle-walk.md")),
+          false
+        );
+      } else {
+        assert.equal(doneResult.executionMode, "direct");
+        assert.equal(doneResult.toPath, path.join(taskRoot, "tasks", "done", "factory-132-lifecycle-walk.md"));
+        assert.equal(fs.existsSync(reviewResult.toPath), false);
+        assert.equal(fs.existsSync(doneResult.toPath), true);
+        assert.match(fs.readFileSync(doneResult.toPath, "utf-8"), /status: done/);
+      }
+    });
+  }
 });
 
 describe("applyReviewAction", () => {
@@ -214,28 +534,7 @@ describe("applyReviewAction", () => {
   });
 
   test("queues governance approve-task instead of moving the local file when governance mode is enabled", () => {
-    const bindingDir = path.join(tmpDir, ".devory");
-    const governanceRepo = path.join(tmpDir, "governance");
-    fs.mkdirSync(path.join(governanceRepo, ".devory-governance"), { recursive: true });
-    fs.writeFileSync(
-      path.join(governanceRepo, ".devory-governance", "config.json"),
-      `${JSON.stringify({ workspace_id: "ws-1" }, null, 2)}\n`,
-      "utf-8",
-    );
-    fs.mkdirSync(bindingDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(bindingDir, "feature-flags.json"),
-      `${JSON.stringify({ governance_repo_enabled: true }, null, 2)}\n`,
-      "utf-8",
-    );
-    fs.writeFileSync(
-      path.join(bindingDir, "governance.json"),
-      `${JSON.stringify({
-        governance_repo_path: governanceRepo,
-        workspace_id: "ws-1",
-      }, null, 2)}\n`,
-      "utf-8",
-    );
+    const governanceRepo = enableGovernance(tmpDir);
 
     const sourcePath = writeTask("review", "factory-129-governance-review.md", taskContent({
       id: "factory-129",

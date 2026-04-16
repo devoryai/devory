@@ -28,7 +28,7 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 | `Devory: Initialize Workspace` | Create the Devory workspace structure |
 | `Devory: List Tasks` | Open a task picker grouped by lifecycle stage |
 | `Devory: Create Task` | Add a new task |
-| `Devory: Generate Tasks from Idea` | Deterministically expand one idea into previewable task drafts, then commit selected drafts to backlog |
+| `Devory: Generate Tasks from Idea` | Open the Task Builder webview, turn one idea into previewable task drafts, then commit selected drafts to backlog |
 | `Devory: Move Task` | Move a task directly to another stage |
 | `Devory: Promote Task` | Move work forward through the lifecycle |
 | `Devory: Open Review Queue` | Jump into review-ready work |
@@ -76,6 +76,8 @@ If it is not, the extension can scaffold it for you. That bootstrap flow works e
 - `Devory: Generate Tasks from Idea` uses deterministic generation first,
   previews all generated drafts before any save, then offers post-commit
   handoff actions.
+- The Task Assistant can also run AI-assisted refinement against the active task,
+  including local Ollama-backed refinement when that target is configured.
 - `Devory: Show Work` is a visibility/control surface; it does not replace
   governance command execution by `devory worker`.
 

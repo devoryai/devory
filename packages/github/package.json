@@ -1,6 +1,6 @@
 {
   "name": "@devory/github",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "Devory GitHub integration — branch naming, PR helpers, and GitHub Actions support",
   "repository": {
     "type": "git",
@@ -22,8 +22,8 @@
     "test": "tsx --test src/test/branch-helpers.test.ts src/test/pr-helpers.test.ts src/test/action-helpers.test.ts"
   },
   "dependencies": {
-    "@devory/cli": "0.4.7",
-    "@devory/core": "0.4.7"
+    "@devory/cli": "0.4.9",
+    "@devory/core": "0.4.9"
   },
   "devDependencies": {
     "esbuild": "^0.20.0",

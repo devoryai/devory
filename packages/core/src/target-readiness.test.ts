@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   detectTargetReadiness,
   probeOllamaReadiness,
+  resolveOllamaBaseUrl,
 } from "./target-readiness.ts";
 import { DEFAULT_ROUTING_POLICY, applyRoutingPolicyOverrides } from "./routing-policy.ts";
 
@@ -71,5 +72,36 @@ describe("target readiness detection", () => {
 
     assert.equal(result.reachable, true);
     assert.deepEqual(result.models, ["qwen2.5-coder:14b"]);
+  });
+
+  test("Ollama probe falls back to host IP candidate when localhost is unreachable", async () => {
+    const seen: string[] = [];
+    const result = await probeOllamaReadiness({
+      env: { OLLAMA_HOST_IP: "172.31.64.1" },
+      fetch_fn: async (input) => {
+        const url = String(input);
+        seen.push(url);
+        if (url.startsWith("http://localhost:11434")) {
+          throw new Error("connect ECONNREFUSED");
+        }
+        if (url.startsWith("http://172.31.64.1:11434")) {
+          return new Response(JSON.stringify({ models: [{ name: "qwen2.5-coder:7b" }] }), {
+            status: 200,
+          });
+        }
+        throw new Error(`unexpected url: ${url}`);
+      },
+    });
+
+    assert.equal(result.reachable, true);
+    assert.equal(result.base_url, "http://172.31.64.1:11434");
+    assert.ok(seen.includes("http://172.31.64.1:11434/api/tags"));
+  });
+
+  test("resolveOllamaBaseUrl prefers OLLAMA_HOST_IP before localhost", () => {
+    assert.equal(
+      resolveOllamaBaseUrl({ OLLAMA_HOST_IP: "172.31.64.1" }),
+      "http://172.31.64.1:11434"
+    );
   });
 });

@@ -15,6 +15,7 @@
 
 import * as fs from "fs";
 import * as vscode from "vscode";
+import { resolveActiveEditorTask, resolveTaskTarget, type TaskCommandTarget } from "../lib/task-target.js";
 
 // ---------------------------------------------------------------------------
 // Section definitions
@@ -81,6 +82,27 @@ function resolveActiveTaskFile(): string | null {
   return filePath;
 }
 
+async function resolveTaskFileForEnrichment(
+  tasksDir?: string,
+  target?: TaskCommandTarget
+): Promise<string | null> {
+  const directTarget =
+    (tasksDir ? resolveTaskTarget(tasksDir, target) : null) ??
+    (tasksDir ? resolveActiveEditorTask(tasksDir) : null);
+
+  if (directTarget?.filepath) {
+    try {
+      const doc = await vscode.workspace.openTextDocument(directTarget.filepath);
+      await vscode.window.showTextDocument(doc, { preview: false });
+    } catch {
+      return null;
+    }
+    return directTarget.filepath;
+  }
+
+  return resolveActiveTaskFile();
+}
+
 async function applySection(
   sectionKey: keyof typeof SECTIONS,
   filePath: string
@@ -106,8 +128,11 @@ async function applySection(
 // Commands
 // ---------------------------------------------------------------------------
 
-export async function taskEnrichCommand(): Promise<void> {
-  const filePath = resolveActiveTaskFile();
+export async function taskEnrichCommand(
+  tasksDir?: string,
+  target?: TaskCommandTarget
+): Promise<void> {
+  const filePath = await resolveTaskFileForEnrichment(tasksDir, target);
   if (!filePath) {
     vscode.window.showErrorMessage(
       "Devory: open a task file first to enrich it."

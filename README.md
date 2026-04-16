@@ -34,13 +34,11 @@ From there:
 
 - Generate Tasks from Idea (VS Code): deterministic task decomposition from a
   short intent, preview-before-save, explicit commit to backlog.
-- Task refinement:
-  - deterministic enrichment commands (acceptance criteria, verification,
-    dependencies, files likely affected)
-  - AI-assisted refinement in the Task Assistant panel
+- Task refinement: deterministic enrichment commands plus AI-assisted refinement in the Task Assistant panel, including local Ollama-backed refinement when configured.
 - Post-commit handoff (VS Code generation flow): run first task, reveal in
   explorer, or open Show Work.
 - Show Work (VS Code): run-state and heartbeat visibility for active work.
+- Local data transparency (VS Code): `Show Stored Data Locations` explains extension-owned state and `Sweep the Workshop` clears only extension-owned local data.
 - Governance mode: CLI and web governance surfaces for command submission and
   worker-applied outcomes.
 - Dry Run / Cost Estimate (VS Code run start): advisory estimate shown before
@@ -58,7 +56,7 @@ From there:
 The public repository currently exposes:
 
 - CLI workspace commands: `setup`, `init`, `task`, `skill`, `run`, `worker`,
-  `artifacts`, `config`, `license`, `cloud`, `doctor`, `diagnostics`
+  `artifacts`, `config`, `license`, `cloud`, `sync`, `doctor`, `diagnostics`
 - CLI governance commands: `governance init`, `governance bind`,
   `governance status`, `governance doctor`, `governance enqueue-local`,
   `migrate`

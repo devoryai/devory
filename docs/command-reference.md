@@ -22,10 +22,6 @@ This reference is based on the command registrations and dispatch paths in:
 If a command is mentioned in an older doc but is not reachable through those
 surfaces, it is intentionally not listed here as currently available.
 
-One important example: the legacy `sync` commands still have historical docs and
-registry entries, but `packages/cli/src/bin.ts` does not dispatch `sync`, so
-they are not currently invokable through the shipped CLI entrypoint.
-
 ## Runtime Model
 
 Use the runtime that matches the job:
@@ -279,7 +275,7 @@ Purpose:
 
 Use it when you want a concrete quality signal rather than a full task run.
 
-### Configuration, licensing, and cloud linkage
+### Configuration, licensing, cloud linkage, and sync
 
 #### `devory config`
 
@@ -381,6 +377,52 @@ devory cloud logout [--root <dir>]
 Purpose:
 
 - Removes the local cloud session without deleting offline licensing state.
+
+`devory cloud ...` handles authentication and workspace linkage. The separate
+`devory sync ...` surface handles artifact and task synchronization once that
+cloud connection exists.
+
+#### `devory sync status`
+
+Usage:
+
+```sh
+devory sync status
+```
+
+Purpose:
+
+- Shows the current sync manifest between local artifacts and the linked cloud
+  workspace.
+- Reports local-only, cloud-only, local-newer, cloud-newer, and in-sync counts.
+
+#### `devory sync push`
+
+Usage:
+
+```sh
+devory sync push [--dry-run] [--force]
+```
+
+Purpose:
+
+- Pushes local artifacts and task/config updates into the linked cloud
+  workspace.
+- `--dry-run` previews what would be pushed.
+- `--force` allows overwriting conflicting cloud state with local state.
+
+#### `devory sync pull`
+
+Usage:
+
+```sh
+devory sync pull [--dry-run]
+```
+
+Purpose:
+
+- Pulls cloud artifacts into the local workspace.
+- `--dry-run` previews what would be pulled before writing files locally.
 
 ### Governance
 
@@ -521,11 +563,10 @@ package.
 - `Devory: Create Task`
   Prompts for metadata and writes a backlog task.
 - `Devory: Generate Tasks from Idea`
-  Opens an on-demand Task Builder webview. Enter a description in plain English,
-  choose optional controls (split into smaller tasks, include acceptance criteria,
-  include verification), generate a Devory-standard draft, preview the raw
-  markdown, and save to `tasks/backlog/`. After saving, the task tree refreshes
-  and the first committed task is revealed in the explorer.
+  Deterministically expands a short intent into one or more task drafts, shows a
+  preview-before-save picker, and commits accepted drafts to `tasks/backlog/`.
+  After commit, the extension offers post-commit handoff actions:
+  `Run first task`, `Reveal in Task Explorer`, or `Open Show Work`.
 - `Devory: Move Task`
   Explicit lifecycle move picker.
 - `Devory: Promote Task`
@@ -555,8 +596,9 @@ package.
   Inserts `Depends On` only if absent.
 - `Devory: Add Files Likely Affected`
   Inserts that section only if absent.
-- `Devory: Draft Task`
-  Alias for `Devory: Generate Tasks from Idea`. Opens the Task Builder webview.
+- `Devory: Open Task Assistant`
+  Opens the task-side assistant webview for AI-assisted refinement and context
+  checks while keeping edits explicit and operator-controlled.
 
 These commands modify the open task file directly. They do not regenerate or
 rewrite existing sections.
@@ -674,7 +716,9 @@ not be read as the authoritative current command surface:
 
 - `docs/cloud-sync.md`
 - older migration notes that mention `devory governance create --hosted`
-- any doc that treats `devory sync` as a currently dispatched CLI command
+- any doc that treats `devory sync` as the primary recommended workflow instead
+  of a Pro/Teams cloud synchronization surface layered on top of `devory cloud`
+  authentication and linkage
 
 For current usage, prefer this reference plus the per-surface docs that now link
 back to it.

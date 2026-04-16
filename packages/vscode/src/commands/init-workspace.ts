@@ -101,6 +101,7 @@ Always load these:
 - doctrine/documentation-standard.md
 - doctrine/database-standard.md
 - doctrine/security-philosophy.md
+- doctrine/data-analytics-formatting.md
 - doctrine/git-workflow-standard.md
 
 Load when relevant:

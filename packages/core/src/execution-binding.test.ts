@@ -333,6 +333,124 @@ describe("execution binding layer", () => {
       assert.equal(binding.fallback_cause, "readiness");
     });
 
+    test("missing local target binds to viable cloud fallback when policy allows it", () => {
+      const readiness: TargetReadinessSnapshot = {
+        provider_classes: {
+          local_ollama: { state: "ready", detail: "inventory loaded" },
+          cloud_premium: { state: "ready", detail: "credentials verified" },
+        },
+        targets: {
+          "ollama:qwen2.5-coder:14b": {
+            state: "unavailable",
+            detail: "model missing",
+          },
+          "ollama:deepseek-coder:6.7b": {
+            state: "unavailable",
+            detail: "model missing",
+          },
+          "cloud:gpt-5-mini": {
+            state: "ready",
+            detail: "credentials verified",
+          },
+        },
+      };
+      const task = makeSimpleTask();
+      const decisions = [routeSimple("prefer_local", registryWithOllama)];
+      const binding = bindExecution(decisions, "prefer_local", {
+        policy: targetAwarePolicy,
+        readiness,
+        task_profiles: [profileTask(task)],
+        task_metas: [task.meta ?? null],
+      });
+
+      assert.equal(binding.selected_provider_class, "cloud_premium");
+      assert.equal(binding.actual_target_id, "cloud:gpt-5-mini");
+      assert.equal(binding.actual_adapter_id, "openai");
+      assert.equal(binding.fallback_taken, true);
+      assert.equal(binding.originally_targeted_class, "local_ollama");
+      assert.equal(binding.target_readiness_state, "ready");
+    });
+
+    test("missing local target blocks before launch when fallback is forbidden", () => {
+      const readiness: TargetReadinessSnapshot = {
+        provider_classes: {
+          local_ollama: { state: "ready", detail: "inventory loaded" },
+          cloud_premium: { state: "ready", detail: "credentials verified" },
+        },
+        targets: {
+          "ollama:qwen2.5-coder:14b": {
+            state: "unavailable",
+            detail: "model missing",
+          },
+          "ollama:deepseek-coder:6.7b": {
+            state: "unavailable",
+            detail: "model missing",
+          },
+          "cloud:gpt-5-mini": {
+            state: "ready",
+            detail: "credentials verified",
+          },
+        },
+      };
+      const task = makeSimpleTask();
+      const decisions = [routeSimple("prefer_local", registryWithOllama)];
+      const binding = bindExecution(decisions, "prefer_local", {
+        policy: applyRoutingPolicyOverrides(targetAwarePolicy, {
+          allow_fallback_to_cloud: false,
+        }),
+        readiness,
+        task_profiles: [profileTask(task)],
+        task_metas: [task.meta ?? null],
+      });
+
+      assert.equal(binding.selected_provider_class, "local_ollama");
+      assert.equal(binding.actual_adapter_id, null);
+      assert.equal(binding.actual_execution_path, null);
+      assert.equal(binding.blocked_by_policy, true);
+      assert.match(binding.policy_block_reason ?? "", /fallback|cloud/i);
+    });
+
+    test("no viable providers leave binding unrunnable instead of selecting a dead local lane", () => {
+      const readiness: TargetReadinessSnapshot = {
+        provider_classes: {
+          local_ollama: { state: "ready", detail: "inventory loaded" },
+          cloud_premium: { state: "unavailable", detail: "credentials missing" },
+        },
+        targets: {
+          "ollama:qwen2.5-coder:14b": {
+            state: "unavailable",
+            detail: "model missing",
+          },
+          "ollama:deepseek-coder:6.7b": {
+            state: "unavailable",
+            detail: "model missing",
+          },
+          "cloud:gpt-5-mini": {
+            state: "unavailable",
+            detail: "credentials missing",
+          },
+          "cloud:claude-sonnet-4-6": {
+            state: "unavailable",
+            detail: "credentials missing",
+          },
+        },
+      };
+      const task = makeSimpleTask();
+      const decisions = [routeSimple("prefer_local", registryWithOllama)];
+      const binding = bindExecution(decisions, "prefer_local", {
+        policy: targetAwarePolicy,
+        readiness,
+        task_profiles: [profileTask(task)],
+        task_metas: [task.meta ?? null],
+      });
+
+      assert.equal(binding.actual_target_id, null);
+      assert.equal(binding.actual_adapter_id, null);
+      assert.equal(binding.actual_execution_path, null);
+      assert.notEqual(binding.execution_path, "local_ollama");
+      assert.equal(binding.target_readiness_state, "unavailable");
+    });
+
     test("formatBindingRecord shows no-fallback on happy path", () => {
       const decisions = [routeSimple("force_cloud")];
       const binding = bindExecution(decisions, "force_cloud");

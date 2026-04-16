@@ -121,6 +121,10 @@ describe("VS Code contribution placement", () => {
     assert.match(whenFor("view/item/context", "devory.taskPromote"), /viewItem == task\.(backlog|ready|doing)/);
     assert.match(whenFor("view/item/context", "devory.taskApprove"), /viewItem == task\.review/);
     assert.match(whenFor("view/item/context", "devory.taskRequeue"), /task\.(blocked|archived)/);
+    assert.match(
+      whenFor("view/item/context", "devory.taskArchive"),
+      /task\\\.\(backlog\|ready\|doing\|review\|blocked\)/
+    );
   });
 
   test("adds practical editor title entry points for task files", () => {

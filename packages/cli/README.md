@@ -54,6 +54,9 @@ npx @devory/cli init
 | `devory cloud login` | Import a Devory cloud session into the current workspace |
 | `devory cloud link` | Bind the current workspace to a cloud workspace ID |
 | `devory cloud logout` | Remove the local cloud session without touching license activation |
+| `devory sync status` | Show sync status between local filesystem and the linked cloud workspace |
+| `devory sync push` | Push local artifacts and tasks to the linked cloud workspace |
+| `devory sync pull` | Pull cloud artifacts into the local filesystem |
 | `devory pr-prep` | Generate branch, commit, and PR description material from a task |
 | `devory pr-create` | Create a GitHub PR with explicit confirmation and token requirements |
 | `devory improve` | Persist a live improvement signal artifact |
@@ -72,6 +75,7 @@ npx @devory/cli init
 - `devory worker` is the runtime that polls and applies governance commands.
 - `devory setup` is the fastest way to get a new governance-mode repo wired end-to-end.
 - Cloud commands manage local session material and workspace linkage; they do not replace `devory worker`.
+- `devory sync ...` is the currently dispatched sync surface for Pro/Teams cloud artifact and task transfer after `devory cloud ...` has established credentials and workspace linkage.
 - Task generation from idea, post-commit handoff, and Show Work are VS Code
   surfaces; the CLI remains the explicit shell command surface.
 - Dry-run/cost estimate messaging is currently surfaced in VS Code run-start

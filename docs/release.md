@@ -61,7 +61,7 @@ All public workspace packages should share the same version. Use the bump script
 
 ```bash
 cd /path/to/devory-public
-./scripts/bump-version.sh 0.4.7
+./scripts/bump-version.sh <version>
 ```
 
 The script updates the public package manifests in:
@@ -79,11 +79,11 @@ node scripts/check-versions.js
 
 ```bash
 git add -A
-git commit -m "chore: release v0.4.7"
-git tag v0.4.7
+git commit -m "chore: release v<version>"
+git tag v<version>
 ```
 
-Pushing `v0.4.7` triggers:
+Pushing `v<version>` triggers:
 - `.github/workflows/publish-npm.yml` — builds, tests, and publishes `@devory/core`, `@devory/cli`, and `@devory/github`
 
 It does **not** publish the VS Code extension.
@@ -107,14 +107,14 @@ npm run package:vscode
 Expected artifact:
 
 ```text
-packages/vscode/devory-vscode-0.4.7.vsix
+packages/vscode/devory-vscode-<version>.vsix
 ```
 
 If you want GitHub to package a matching artifact without publishing it, push a dedicated packaging tag:
 
 ```bash
-git tag vscode-v0.4.7
-git push origin vscode-v0.4.7
+git tag vscode-v<version>
+git push origin vscode-v<version>
 ```
 
 That tag triggers `.github/workflows/publish-vscode.yml`, which packages the extension and uploads the `.vsix` as a workflow artifact for manual retrieval.

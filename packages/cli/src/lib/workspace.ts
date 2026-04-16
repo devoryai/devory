@@ -309,6 +309,7 @@ export function moveTask(
   options: { factoryRoot: string }
 ): MoveTaskResult {
   const { factoryRoot } = options;
+  const taskMutationRoot = resolveTaskMutationRoot(factoryRoot);
   const resolvedTask = path.isAbsolute(args.task)
     ? args.task
     : path.resolve(factoryRoot, args.task);
@@ -351,7 +352,7 @@ export function moveTask(
   }
 
   const updated = rewriteStatus(raw, args.to);
-  const destDir = path.join(factoryRoot, LIFECYCLE_DIR_MAP[args.to as LifecycleStage]);
+  const destDir = path.join(taskMutationRoot, LIFECYCLE_DIR_MAP[args.to as LifecycleStage]);
   const filename = path.basename(resolvedTask);
   const destPath = path.join(destDir, filename);
 

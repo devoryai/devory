@@ -55,7 +55,24 @@ describe("execution adapter resolution", () => {
     assert.equal(resolution?.execution_path, "packaged_runner:ollama");
   });
 
-  test("marks unsupported concrete target unavailable without fabricating success", () => {
+  test("maps dynamic concrete ollama target onto the packaged local lane", () => {
+    const resolution = resolveExecutionAdapter({
+      target: makeTarget({
+        id: "ollama:qwen2.5-coder:7b",
+        model_id: "qwen2.5-coder:7b",
+        label: "Qwen 2.5 Coder 7B (Ollama)",
+        readiness_state: "ready",
+      }),
+    });
+
+    assert.equal(resolution?.adapter_id, "ollama");
+    assert.equal(resolution?.invocation_mode, "ollama");
+    assert.equal(resolution?.execution_path, "packaged_runner:ollama");
+    assert.equal(resolution?.available, true);
+    assert.match(resolution?.note ?? "", /Resolved dynamically onto the packaged Ollama lane/);
+  });
+
+  test("maps dynamic cloud targets onto the packaged cloud lane when readiness allows", () => {
     const resolution = resolveExecutionAdapter({
       target: makeTarget({
         id: "cloud:claude-opus-4-1",
@@ -66,8 +83,10 @@ describe("execution adapter resolution", () => {
       }),
     });
 
-    assert.equal(resolution?.available, false);
-    assert.match(resolution?.reason ?? "", /No execution adapter binding is implemented/);
+    assert.equal(resolution?.available, true);
+    assert.equal(resolution?.adapter_id, "claude");
+    assert.equal(resolution?.execution_path, "packaged_runner:claude");
+    assert.match(resolution?.note ?? "", /Resolved dynamically onto the packaged Claude lane/);
   });
 
   test("respects blocked-by-policy readiness", () => {

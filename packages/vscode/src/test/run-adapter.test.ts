@@ -52,6 +52,27 @@ describe("resolvePackagedRunInvocation", () => {
 
     assert.equal(invocation.env.FACTORY_DEFAULT_ENGINE, "ollama");
   });
+
+  test("preserves OLLAMA_BASE_URL through the packaged runner handoff", () => {
+    const previous = process.env.OLLAMA_BASE_URL;
+    process.env.OLLAMA_BASE_URL = "http://gpu-host:11434";
+
+    try {
+      const invocation = resolvePackagedRunInvocation("/workspace", "/extension/runtime", {
+        routingEnv: {
+          DEVORY_ADAPTER_INVOCATION_MODE: "ollama",
+        },
+      });
+
+      assert.equal(invocation.env.OLLAMA_BASE_URL, "http://gpu-host:11434");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.OLLAMA_BASE_URL;
+      } else {
+        process.env.OLLAMA_BASE_URL = previous;
+      }
+    }
+  });
 });
 
 describe("startFactoryRun", () => {

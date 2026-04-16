@@ -307,6 +307,51 @@ describe("execution outcome helpers", () => {
     assert.equal(finalized.learnable, true);
   });
 
+  test("treats paused_for_review as successful execution awaiting review", () => {
+    const session = createExecutionOutcomeSession("2026-04-14T10:00:00.000Z");
+    const started = buildRunStartOutcome(
+      session,
+      {
+        timestamp: "2026-04-14T10:00:01.000Z",
+        task_ids: ["factory-401"],
+        task_profiles: [makeTaskProfile()],
+        binding: makeBinding({
+          selected_provider_class: "local_ollama",
+          actual_target_id: "ollama:qwen2.5-coder:7b",
+          actual_adapter_id: "ollama",
+          adapter_id: "ollama",
+          actual_execution_path: "packaged_runner:ollama",
+          fallback_taken: false,
+          originally_targeted_class: null,
+          fallback_reason: null,
+        }),
+        estimate: makeEstimate(),
+        preference_used: "auto",
+      },
+      "orchestrator-run-1"
+    );
+
+    const finalized = finalizeExecutionOutcome(
+      started,
+      { ...session, next_sequence: 2 },
+      {
+        timestamp: "2026-04-14T10:02:00.000Z",
+        run_id: "orchestrator-run-1",
+        run_record: makeRunRecord({
+          status: "paused_for_review",
+        }),
+        exit_code: 0,
+        signal: null,
+        no_output: false,
+        failure_reason: "[orchestrator] REVIEW GATE — task factory-401: execution complete, awaiting human review",
+      }
+    );
+
+    assert.equal(finalized.run_result_status, "completed");
+    assert.equal(finalized.failure_reason, null);
+    assert.equal(finalized.learnable, true);
+  });
+
   test("finalizes records on failure and preserves surfaced failure reason", () => {
     const session = createExecutionOutcomeSession("2026-04-14T10:00:00.000Z");
     const started = buildRunStartOutcome(

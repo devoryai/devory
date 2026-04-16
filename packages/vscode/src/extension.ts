@@ -437,8 +437,9 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("devory.enrichTask", () => {
-      void taskEnrichCommand();
+    vscode.commands.registerCommand("devory.enrichTask", (target) => {
+      const root = getFactoryRoot();
+      void taskEnrichCommand(resolveTasksDir(root), target);
     })
   );
 
