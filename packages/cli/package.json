@@ -1,6 +1,6 @@
 {
   "name": "@devory/cli",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Devory CLI — formal command interface for Devory",
   "repository": {
     "type": "git",
