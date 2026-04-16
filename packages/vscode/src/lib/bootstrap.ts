@@ -12,49 +12,7 @@ import * as vscode from "vscode";
 import * as cp from "child_process";
 import { findDevoryCli } from "./find-devory-cli.js";
 import { buildCliSpawnEnv } from "./cli-spawn-env.js";
-
-// ── Persistence keys ────────────────────────────────────────────────────────
-
-/**
- * Stored in globalState once the user has successfully initialized a workspace
- * (or if a workspace was already initialized when the extension first activated).
- * Once set, the bootstrap prompt is permanently suppressed.
- */
-const STATE_KEY = "devory.firstRunCompleted";
-
-// ── State helpers ────────────────────────────────────────────────────────────
-
-/**
- * Returns true if the bootstrap prompt should be shown.
- *
- * Short-circuits if:
- *  - firstRunCompleted is already set in globalState
- *  - the workspace is already initialized (sets the flag silently and returns false)
- */
-export function shouldShowBootstrap(
-  context: Pick<vscode.ExtensionContext, "globalState">,
-  workspaceInitialized: boolean
-): boolean {
-  if (context.globalState.get<boolean>(STATE_KEY)) return false;
-
-  if (workspaceInitialized) {
-    // Workspace was set up before we started tracking — mark complete silently.
-    void context.globalState.update(STATE_KEY, true);
-    return false;
-  }
-
-  return true;
-}
-
-/**
- * Marks the first-run flow as complete.
- * Call this after workspace initialization succeeds.
- */
-export function markFirstRunComplete(
-  context: Pick<vscode.ExtensionContext, "globalState">
-): void {
-  void context.globalState.update(STATE_KEY, true);
-}
+export { shouldShowBootstrap, markFirstRunComplete } from "./bootstrap-state.js";
 
 // ── CLI readiness check ──────────────────────────────────────────────────────
 

@@ -13,7 +13,7 @@
 
 import { describe, it, beforeEach } from "node:test";
 import * as assert from "node:assert/strict";
-import { shouldShowBootstrap, markFirstRunComplete } from "../lib/bootstrap.js";
+import { shouldShowBootstrap, markFirstRunComplete } from "../lib/bootstrap-state.js";
 
 // ---------------------------------------------------------------------------
 // Fake globalState (no vscode runtime needed)

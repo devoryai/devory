@@ -27,7 +27,8 @@ const REFRESH_INTERVAL_MS = 5_000;
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type WebviewMessage =
-  | { type: "invokeCommand"; command: string };
+  | { type: "invokeCommand"; command: string }
+  | { type: "ready" };
 
 // ── Provider ─────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,11 @@ export class ShowWorkProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage((msg: WebviewMessage) => {
       if (msg.type === "invokeCommand") {
         void vscode.commands.executeCommand(msg.command);
+      }
+      // Webview signals readiness after its JS loads — respond immediately so
+      // the panel never stays on the "Loading…" placeholder.
+      if (msg.type === "ready") {
+        this._sendState();
       }
     });
 
@@ -95,8 +101,9 @@ export class ShowWorkProvider implements vscode.WebviewViewProvider {
         data: serializeData(data),
         refreshedAt: new Date().toISOString(),
       });
-    } catch {
-      // Never crash the panel on a read error.
+    } catch (err) {
+      // Log so errors are diagnosable, but never crash the panel.
+      console.error("[Devory Show Work] Error reading state:", err);
     }
   }
 
@@ -891,6 +898,11 @@ function buildShellHtml(): string {
         if (el) el.textContent = hh + ':' + mm + ':' + ss;
       }
     });
+
+    // Signal to the extension that we're ready to receive data.
+    // This avoids the race where postMessage arrives before the listener above
+    // is registered (which would leave the panel on "Loading…" indefinitely).
+    vscode.postMessage({ type: 'ready' });
   </script>
 </body>
 </html>`;

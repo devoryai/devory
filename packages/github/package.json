@@ -1,6 +1,6 @@
 {
   "name": "@devory/github",
-  "version": "0.4.9",
+  "version": "0.5.0",
   "description": "Devory GitHub integration — branch naming, PR helpers, and GitHub Actions support",
   "repository": {
     "type": "git",

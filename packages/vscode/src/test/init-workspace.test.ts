@@ -16,7 +16,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 
-import { runBuiltinInit } from "../commands/init-workspace.js";
+import { runBuiltinInit } from "../commands/init-workspace-core.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
