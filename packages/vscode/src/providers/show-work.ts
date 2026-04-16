@@ -102,8 +102,17 @@ export class ShowWorkProvider implements vscode.WebviewViewProvider {
         refreshedAt: new Date().toISOString(),
       });
     } catch (err) {
-      // Log so errors are diagnosable, but never crash the panel.
       console.error("[Devory Show Work] Error reading state:", err);
+      void this._view?.webview.postMessage({
+        type: "update",
+        runState: "idle",
+        data: {
+          doingTasks: [], reviewTasks: [], heartbeat: null, routingTruth: null,
+          providerReadiness: [], lastRunSummary: null, failureSummary: null,
+          recentActivity: [{ label: "Error", detail: String(err), recordedAgo: null }],
+        },
+        refreshedAt: new Date().toISOString(),
+      });
     }
   }
 
@@ -797,16 +806,17 @@ function buildShellHtml(): string {
       const visible = (highlighted.length > 0 ? highlighted : providerReadiness.slice(0, 3));
 
       const rows = visible.map((provider) => {
+        const summary = provider.summary || '';
         const status = !provider.configured
           ? 'not configured'
           : provider.routeable
             ? provider.reachable === 'reachable' ? 'configured' : 'check setup'
-            : provider.summary.toLowerCase().includes('model')
+            : summary.toLowerCase().includes('model')
               ? 'model issue'
               : 'degraded';
         return '<div class="provider-row">' +
-          '<div class="provider-title"><span>' + esc(provider.label) + '</span><span class="provider-state">' + esc(status) + '</span></div>' +
-          '<div class="provider-summary">' + esc(provider.summary) + '</div>' +
+          '<div class="provider-title"><span>' + esc(provider.label || '') + '</span><span class="provider-state">' + esc(status) + '</span></div>' +
+          '<div class="provider-summary">' + esc(summary) + '</div>' +
           '</div>';
       }).join('');
 
@@ -886,16 +896,21 @@ function buildShellHtml(): string {
 
     // ── Message listener ────────────────────────────────────────────────────
     window.addEventListener('message', (event) => {
-      const msg = event.data;
-      if (msg.type === 'update') {
-        render(msg.runState, msg.data);
-        // Update "refreshed" timestamp in header.
-        const ts = new Date(msg.refreshedAt);
-        const hh = String(ts.getHours()).padStart(2, '0');
-        const mm = String(ts.getMinutes()).padStart(2, '0');
-        const ss = String(ts.getSeconds()).padStart(2, '0');
-        const el = document.getElementById('refreshed-at');
-        if (el) el.textContent = hh + ':' + mm + ':' + ss;
+      try {
+        const msg = event.data;
+        if (msg.type === 'update') {
+          render(msg.runState, msg.data);
+          // Update "refreshed" timestamp in header.
+          const ts = new Date(msg.refreshedAt);
+          const hh = String(ts.getHours()).padStart(2, '0');
+          const mm = String(ts.getMinutes()).padStart(2, '0');
+          const ss = String(ts.getSeconds()).padStart(2, '0');
+          const el = document.getElementById('refreshed-at');
+          if (el) el.textContent = hh + ':' + mm + ':' + ss;
+        }
+      } catch (e) {
+        const root = document.getElementById('root');
+        if (root) root.innerHTML = '<div class="empty" style="color:var(--vscode-terminal-ansiRed)">Render error: ' + esc(String(e)) + '</div>';
       }
     });
 
