@@ -3,6 +3,19 @@ dist/
 out/
 *.vsix
 *.js.map
+# Env files: never tracked; keep *.example templates (factory-505)
 .env
 .env.*
+!.env.example
+!.env.*.example
 *.local
+*.pem
+*.p12
+*.pfx
+
+# Devory session and runtime state (factory-505)
+.devory/session.json
+.devory/commands/
+runs/
+artifacts/
+logs/
