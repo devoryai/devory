@@ -1,6 +1,7 @@
 {
   "name": "@devory/core",
   "version": "0.5.1",
+  "license": "MIT",
   "description": "Shared types and workspace utilities for Devory",
   "repository": {
     "type": "git",

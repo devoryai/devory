@@ -1,0 +1,13 @@
+{
+  "$comment": "factory-507: reviewed resolutions for flagged dependencies in this repo. scripts/legal/license-check.mjs --check fails on any flagged package without an entry here. Resolutions: acceptable-with-notice | replace | escalate. Add entries only after review; see docs/legal/dependency-licenses.md.",
+  "reviewed": "2026-11-22",
+  "resolutions": [
+    {
+      "package": "@vscode/vsce-sign*",
+      "license": "SEE LICENSE IN LICENSE.txt (Microsoft proprietary)",
+      "scope": "dev only (pulled in by @vscode/vsce for packaging the VS Code extension)",
+      "resolution": "acceptable-with-notice",
+      "reason": "Build-time signing tool; never bundled into or redistributed with Devory. Must stay a devDependency."
+    }
+  ]
+}

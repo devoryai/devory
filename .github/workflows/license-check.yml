@@ -1,0 +1,22 @@
+# factory-507: fail on newly introduced dependencies with copyleft, unknown,
+# or non-redistributable licenses that have no reviewed resolution in
+# docs/legal/license-resolutions.json. Offline: reads package-lock.json.
+name: license-check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check dependency licenses
+        run: node scripts/legal/license-check.mjs --check

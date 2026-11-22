@@ -3,6 +3,7 @@
   "displayName": "Devory.AI",
   "description": "Repo-aware task, run, doctrine, and review workflow for Devory in VS Code",
   "version": "0.5.1",
+  "license": "MIT",
   "publisher": "DevoryAI",
   "engines": {
     "vscode": "^1.85.0"
