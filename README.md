@@ -91,3 +91,19 @@ Devory uses `Core`, `Pro`, and `Teams` as product plan language.
 - [docs/command-reference.md](docs/command-reference.md) — current command surfaces and behavior
 - [docs/vscode-extension.md](docs/vscode-extension.md) — VS Code control surface details
 - [docs/routing-summary.md](docs/routing-summary.md) — routing outcome ledger and summary behavior
+
+## Secret scanning
+
+Env files (`.env*`, except `*.example` templates) and key files are never tracked. `.github/workflows/secret-scan.yml` runs [gitleaks](https://github.com/gitleaks/gitleaks) 8.21.2 on every push and pull request. It scans all tracked files and the new commits, and fails on any finding. The allowlist is in `.gitleaks.toml`.
+
+Optional pre-commit hook (blocks a commit whose staged changes contain a secret):
+
+```bash
+cat > .git/hooks/pre-commit <<'HOOK'
+#!/bin/sh
+exec gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml
+HOOK
+chmod +x .git/hooks/pre-commit
+```
+
+Run the CI scan locally with `.github/scripts/secret-scan.sh origin/main..HEAD`.

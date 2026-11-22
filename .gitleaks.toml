@@ -1,0 +1,15 @@
+# factory-505: gitleaks configuration (default rules + repo allowlist).
+# Used by .github/workflows/secret-scan.yml and .github/scripts/secret-scan.sh.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "third-party and build output"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.next/''',
+  '''(^|/)dist/''',
+  '''(^|/)out/''',
+  '''(^|/)\.vercel/''',
+  '''(^|/)\.turbo/''',
+]
